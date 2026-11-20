@@ -38,7 +38,15 @@ typedef struct {
 
 static slot_t s_slots[SLOTS];
 static SemaphoreHandle_t s_lock;
-static volatile uint32_t s_reqs, s_timeouts, s_clients;
+static volatile uint32_t s_reqs, s_timeouts, s_clients, s_retries;
+
+/* retransmit interval: ~3x measured 1-hop RTT per air rate, + time for fragments */
+static int mb_retry_ms(size_t req_len)
+{
+    static const int base[] = { 900, 1200, 3500 };     /* rate 0 / 1 / 2 */
+    int b = base[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate];
+    return b + (int)e52_airtime_ms(req_len) + 2 * (int)e52_airtime_ms(E52_MAX_PAYLOAD);
+}
 
 void modbus_gw_stats(uint32_t *r, uint32_t *t, uint32_t *c) { *r = s_reqs; *t = s_timeouts; *c = s_clients; }
 
@@ -108,18 +116,30 @@ int modbus_gw_txn(uint16_t node, uint8_t dst_unit, const uint8_t *pdu, size_t pl
     req[0] = dst_unit;
     memcpy(req + 1, pdu, plen);
     s_reqs++;
-    if (lmesh_send_udp(node, s->seq, LMESH_PORT_MODBUS, LMESH_PORT_MODBUS, req, plen + 1) != ESP_OK) {
-        s->active = false;
-        return MB_ERR_SEND;
+
+    /* The mesh drops a few % of frames and LMESH has no ACK, so retransmit the
+     * same seq if no reply comes within ~3x a typical RTT. Duplicate replies
+     * are ignored (slot already inactive). Reads/writes are idempotent. */
+    int retry_ms = mb_retry_ms(plen + 1);
+    bool got = false;
+    for (int attempt = 0; !got; attempt++) {
+        int64_t left = (deadline - esp_timer_get_time()) / 1000;
+        if (left < 50) break;
+        if (attempt) { s_retries++; ESP_LOGW(TAG, "node 0x%04X seq %u: no reply, retry %d", node, s->seq, attempt); }
+        if (lmesh_send_udp(node, s->seq, LMESH_PORT_MODBUS, LMESH_PORT_MODBUS, req, plen + 1) != ESP_OK) {
+            if (attempt == 0) { s->active = false; return MB_ERR_SEND; }
+            continue;
+        }
+        int wait = left < retry_ms ? (int)left : retry_ms;
+        got = xSemaphoreTake(s->sem, pdMS_TO_TICKS(wait)) == pdTRUE;
     }
-    int64_t left = (deadline - esp_timer_get_time()) / 1000;
-    if (left < 100) left = 100;
-    if (xSemaphoreTake(s->sem, pdMS_TO_TICKS(left)) != pdTRUE) {
+    if (!got) {
         xSemaphoreTake(s_lock, portMAX_DELAY);
+        bool late = !s->active;            /* reply raced the deadline */
         s->active = false;
         xSemaphoreGive(s_lock);
-        s_timeouts++;
-        return MB_ERR_TIMEOUT;
+        if (!late) { s_timeouts++; return MB_ERR_TIMEOUT; }
+        xSemaphoreTake(s->sem, 0);
     }
     int n = s->len - 1;                     /* strip unit byte */
     if ((size_t)n > rmax) n = rmax;
@@ -221,6 +241,7 @@ static void server_task(void *arg)
         if (fd < 0) { vTaskDelay(pdMS_TO_TICKS(100)); continue; }
         if (s_clients >= MAX_CLIENTS) { close(fd); continue; }
         int ka = 1; setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &ka, sizeof ka);
+        setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &ka, sizeof ka);
         struct timeval tv = { .tv_sec = 300 };   /* idle client timeout */
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof tv);
         if (xTaskCreate(client_task, "mbcli", 4096, (void *)(intptr_t)fd, 6, NULL) != pdPASS) close(fd);

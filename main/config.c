@@ -24,11 +24,11 @@ void cfg_defaults(gw_cfg_t *c)
     c->mqtt_en = false;
     strcpy(c->mqtt_uri, "mqtt://192.168.1.10:1883");
     c->e52_channel = 65;            /* 915.125 MHz, mid-band */
-    c->e52_rate = 2;                /* 7 kbps, longest range */
+    c->e52_rate = 1;                /* 21.875 kbps: ~3.5x faster than 7k, moderate range */
     c->e52_power = 22;
     c->e52_panid = 0x1234;
     c->e52_addr = 0x0001;
-    c->e52_csma = 127;
+    c->e52_csma = 40;               /* ms; 127 -> 40 cut 1-hop RTT median 371 -> 224 ms */
     c->uart_tx = CONFIG_LMGW_E52_TX_GPIO;
     c->uart_rx = CONFIG_LMGW_E52_RX_GPIO;
     c->uart_rst = CONFIG_LMGW_E52_RST_GPIO;

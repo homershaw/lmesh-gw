@@ -39,7 +39,7 @@ The component manager downloads `espressif/mqtt` and `espressif/cjson` on IDF 6.
 ## Radio settings
 
 * Channel n = 850.125 + n MHz. The UI only offers 52–77 (902.125–927.125 MHz). Default is 65 = 915.125 MHz.
-* Air rate 2 = 7 kbps (default), 1 = 21.875 kbps, 0 = 62.5 kbps. The E52 sets bandwidth and SF internally for each rate. Its AT command set has no separate 500 kHz BW setting.
+* Air rate 2 = 7 kbps (longest range), 1 = 21.875 kbps (default), 0 = 62.5 kbps. The E52 sets bandwidth and SF internally for each rate. Its AT command set has no separate 500 kHz BW setting.
 * Max 200 B per packet. LMESH uses 7 B of header, which leaves 193 B per fragment, with up to 4 fragments (772 B).
 * On boot the gateway sends the radio settings to the module only if they changed (`AT+HEAD=1`, `BACK=0`, `CHANNEL`, `POWER`, `PANID`, `SRC_ADDR`, `TYPE=0`, `CSMA_RNG`, `RATE`, `OPTION`), then resets it. "Save + apply to E52" does the same on demand and shows each reply.
 * All nodes need the same PANID, channel and rate. Routers use addresses 0x0001–0x7FFF and battery or terminal nodes use 0x8000–0xFFFE. Node IPv4 = `10.52.<hi>.<lo>` of the address.
@@ -70,7 +70,9 @@ Avoid sending anything that starts with `AT+`. The module treats it as a command
 
 ## Timing
 
-At 7 kbps, a Modbus read request (~15 B) takes about 60–100 ms per hop of airtime, plus CSMA. Set your SCADA poll timeout to at least the gateway's `mb_timeout_ms` (default 6000), and poll slowly (≥10 s per device). The gateway sends one transaction per node at a time. Unanswered requests come back as Modbus exception 0x0B.
+Measured on the bench (one hop, Modbus FC3 read of 4 registers, Modbus TCP round trip): 7 kbps median ~1.2 s (max ~2.7 s); 21.875 kbps median ~375 ms (max ~620 ms); 62.5 kbps median ~290 ms. Each step up in rate costs roughly 4–5 dB of link budget (range). Set your SCADA poll timeout to at least the gateway's `mb_timeout_ms` (default 6000), and poll slowly (≥10 s per device). The gateway sends one transaction per node at a time. If a reply doesn't arrive within about 3× a normal round trip (≈1.5 s at 21.875 kbps), it resends the same request with the same seq; nodes must therefore handle a repeated request (Modbus reads/writes are safe to repeat). Requests still unanswered at `mb_timeout_ms` come back as Modbus exception 0x0B.
+
+CSMA backoff (`e52_csma`) defaults to 40 ms (factory 127). On the bench this cut 1-hop ping RTT at 21.875 kbps from a median of 371 ms to 224 ms. The E52 does not keep `CSMA_RNG` across a reset, so the gateway sends it on every boot and after every config apply. End nodes should do the same.
 
 ## MQTT topics (base default `lmesh/<last4MAC>`)
 

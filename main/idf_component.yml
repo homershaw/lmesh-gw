@@ -10,3 +10,6 @@ dependencies:
     version: "*"
     rules:
       - if: "idf_version >=6.0"
+  ## E52 dev board on the S31 USB-HS (OTG) port: CH340 USB-serial
+  espressif/usb_host_ch34x_vcp:
+    version: "^2.2.1"

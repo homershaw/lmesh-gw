@@ -11,6 +11,7 @@
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "cJSON.h"
+#include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
@@ -274,12 +275,22 @@ static esp_err_t h_reboot(httpd_req_t *r)
     return ESP_OK;
 }
 
+/* Responses go out as header + body segments; without NODELAY the body waits
+ * for the client's ACK (Nagle) and a slow/lost ACK costs a ~1.5 s RTO. */
+static esp_err_t on_open(httpd_handle_t hd, int fd)
+{
+    int one = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+    return ESP_OK;
+}
+
 void web_start(void)
 {
     httpd_config_t c = HTTPD_DEFAULT_CONFIG();
     c.stack_size = 10240;
     c.max_uri_handlers = 16;
     c.lru_purge_enable = true;
+    c.open_fn = on_open;
     httpd_handle_t s;
     if (httpd_start(&s, &c) != ESP_OK) { ESP_LOGE(TAG, "httpd start failed"); return; }
     const httpd_uri_t u[] = {
