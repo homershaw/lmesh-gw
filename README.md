@@ -10,6 +10,13 @@ Border gateway for a LoRa mesh (902–928 MHz). It carries UDP/IPv4 datagrams ac
 | MQTT client bridge | `<base>/<NODE>/…` up, `<base>/<NODE>/set/…` down |
 | UDP bridge | port 5252, `[node IPv4][port][payload]` |
 
+## Repo layout
+
+* `main/` holds the gateway firmware (ESP32-S31).
+* `node/` holds the field node firmware (XIAO ESP32-C6 + E52 + RS-485). See [node/README.md](node/README.md).
+* `shared/` holds the E52 driver and the LMESH layer, which both firmwares use.
+* `tools/` holds the PC end-node simulator, benchmarks, and a small test MQTT broker.
+
 ## Build (tonight)
 
 ESP32-S31 builds only on **ESP-IDF v6.1 / master**.
@@ -59,7 +66,7 @@ b7..    payload (<=193)
 
 End-node agent duties (any MCU + E52 with `AT+HEAD=1`, `AT+TYPE` set, unicast to the gateway address):
 
-1. **On boot**: send ANNOUNCE to the gateway with payload `name\0kind\0fw\0`.
+1. **On boot**: send ANNOUNCE to the gateway with payload `name\0kind\0fw\0site\0` (site optional). Re-send it when the gateway announces itself (kind `gateway`) and every 10 min, so a rebooted gateway relearns site IDs.
 2. **PING** → reply PONG with the same seq.
 3. **UDP dport 502**: payload `[unit][PDU]`. Run it as Modbus RTU on the RS-485/UART (add CRC), then reply UDP sport 502 → dport 502 with `[unit][response PDU]` and **the same seq**. Fragment if the reply is over 193 B (FC3 with more than 95 registers).
 4. **MQTT up**: send UDP dport 1883 with `subtopic\0payload`. The gateway publishes it to `<base>/<NODE4HEX>/subtopic`.
@@ -79,8 +86,8 @@ CSMA backoff (`e52_csma`) defaults to 40 ms (factory 127). On the bench this cut
 * `<base>/gw/status` — `online`/`offline` (retained, LWT)
 * `<base>/gw/stats` — JSON every 60 s
 * `<base>/gw/nodes` — JSON node table every 60 s (retained)
-* `<base>/<NODE>/<subtopic>` — uplink from node
-* `<base>/<NODE>/set/<subtopic>` — downlink to node
+* `<base>/<SITE or NODE>/<subtopic>` — uplink from node. `<SITE>` is the site ID the node sent in ANNOUNCE (4th field). If the node sent none, or another live node already holds that ID, the 4-hex node number is used instead.
+* `<base>/<SITE or NODE>/set/<subtopic>` — downlink to node
 
 ## Known limits / to verify on hardware
 

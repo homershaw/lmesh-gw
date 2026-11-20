@@ -22,7 +22,7 @@
 
 #define LMESH_VER          0x10
 #define LMESH_T_UDP        0x01
-#define LMESH_T_ANNOUNCE   0x02   /* payload: "name\0kind\0fw\0" */
+#define LMESH_T_ANNOUNCE   0x02   /* payload: "name\0kind\0fw\0[site\0]" */
 #define LMESH_T_PING       0x03
 #define LMESH_T_PONG       0x04
 
@@ -55,11 +55,20 @@ typedef struct {
     char name[24];
     char kind[16];
     char fw[16];
+    char site[40];            /* location id (e.g. LSD) from ANNOUNCE; MQTT topic level */
+    bool site_dup;            /* another live node already owns this site id */
 } lmesh_node_t;
 
 typedef void (*lmesh_handler_t)(const lmesh_dgram_t *d);
 
+typedef void (*lmesh_announce_cb_t)(uint16_t src, const char *kind);
+
 void      lmesh_init(void);
+/* What this device says in ANNOUNCE. boot_dst: where lmesh_start() announces (gateway: broadcast). */
+void      lmesh_set_identity(const char *name, const char *kind, const char *fw, const char *site, uint16_t boot_dst);
+esp_err_t lmesh_announce(uint16_t dst);
+/* called (from the lmesh task) for every ANNOUNCE received; keep it short */
+void      lmesh_on_announce(lmesh_announce_cb_t cb);
 esp_err_t lmesh_start(void);                               /* bring up E52, announce */
 esp_err_t lmesh_bind(uint16_t port, lmesh_handler_t h);
 /* default handler for datagrams to unbound ports (UDP bridge) */
@@ -76,6 +85,10 @@ esp_err_t lmesh_discover(void);                            /* broadcast ping */
 
 int       lmesh_nodes(lmesh_node_t *out, int max);
 int       lmesh_node_count(void);
+/* MQTT topic level for a node: its site id if announced and unique, else 4 hex digits */
+void      lmesh_node_topic(uint16_t addr, char *out, size_t n);
+/* resolve a topic level (site id or 4 hex digits) to a node address */
+bool      lmesh_topic_to_addr(const char *lvl, size_t len, uint16_t *addr);
 void      lmesh_ip_str(uint16_t addr, char *buf, size_t n);
 bool      lmesh_ip_to_addr(uint32_t ip_host_order, uint16_t *addr);
 uint32_t  lmesh_addr_to_ip(uint16_t addr);                 /* host order */

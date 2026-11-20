@@ -59,6 +59,7 @@ void app_main(void)
     udp_bridge_start();         /* default handler */
     web_start();
 
+    lmesh_set_identity(g_cfg.hostname, "gateway", GW_FW_VERSION, "", LMESH_BCAST);
     if (lmesh_start() == ESP_OK) sync_radio_config();
     else ESP_LOGE(TAG, "E52 not responding - web UI still available for pin/baud config");
 

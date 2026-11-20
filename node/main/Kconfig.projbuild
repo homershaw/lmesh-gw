@@ -1,0 +1,29 @@
+menu "LMESH node"
+    config LMGW_E52_UART_NUM
+        int "UART port for E52"
+        default 1
+    config LMGW_E52_TX_GPIO
+        int "ESP TX -> E52 RXD GPIO (XIAO D4)"
+        default 22
+    config LMGW_E52_RX_GPIO
+        int "ESP RX <- E52 TXD GPIO (XIAO D5)"
+        default 23
+    config LMGW_E52_RST_GPIO
+        int "E52 reset GPIO, -1 = not wired (XIAO D6 = 16)"
+        default -1
+    config LMGW_E52_BAUD
+        int "E52 UART baud"
+        default 115200
+    config LMN_RS485_UART_NUM
+        int "UART port for RS-485"
+        default 0
+    config LMN_RS485_TX_GPIO
+        int "ESP TX -> RS-485 board GPIO (XIAO D2)"
+        default 2
+    config LMN_RS485_RX_GPIO
+        int "ESP RX <- RS-485 board GPIO (XIAO D3)"
+        default 21
+    config LMN_XIAO_C6_ANT
+        bool "Seeed XIAO ESP32-C6 antenna switch (GPIO3/GPIO14)"
+        default y
+endmenu

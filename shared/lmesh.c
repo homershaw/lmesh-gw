@@ -1,4 +1,6 @@
 #include <string.h>
+#include <ctype.h>
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdio.h>
 #include "lmesh.h"
@@ -23,6 +25,7 @@ static QueueHandle_t s_rxq;
 static SemaphoreHandle_t s_nodes_lock, s_ping_lock, s_ping_sem;
 static lmesh_node_t s_nodes[LMESH_MAX_NODES];
 static int s_nnodes;
+static lmesh_announce_cb_t s_ann_cb;
 static uint8_t s_seq;
 static portMUX_TYPE s_seq_mux = portMUX_INITIALIZER_UNLOCKED;
 
@@ -103,6 +106,52 @@ int lmesh_nodes(lmesh_node_t *out, int max)
 
 int lmesh_node_count(void) { return s_nnodes; }
 
+void lmesh_node_topic(uint16_t addr, char *out, size_t n)
+{
+    snprintf(out, n, "%04X", addr);
+    xSemaphoreTake(s_nodes_lock, portMAX_DELAY);
+    for (int i = 0; i < s_nnodes; i++)
+        if (s_nodes[i].addr == addr && s_nodes[i].site[0] && !s_nodes[i].site_dup)
+            snprintf(out, n, "%s", s_nodes[i].site);
+    xSemaphoreGive(s_nodes_lock);
+}
+
+bool lmesh_topic_to_addr(const char *lvl, size_t len, uint16_t *addr)
+{
+    bool ok = false;
+    xSemaphoreTake(s_nodes_lock, portMAX_DELAY);
+    for (int i = 0; i < s_nnodes && !ok; i++)
+        if (s_nodes[i].site[0] && !s_nodes[i].site_dup && strlen(s_nodes[i].site) == len &&
+            strncmp(s_nodes[i].site, lvl, len) == 0) { *addr = s_nodes[i].addr; ok = true; }
+    xSemaphoreGive(s_nodes_lock);
+    if (ok || len != 4) return ok;
+    for (size_t i = 0; i < 4; i++) if (!isxdigit((unsigned char)lvl[i])) return false;
+    char h[5] = { lvl[0], lvl[1], lvl[2], lvl[3], 0 };
+    *addr = (uint16_t)strtol(h, NULL, 16);
+    return true;
+}
+
+/* MQTT-safe topic level: no '/', '+', '#', spaces or control chars */
+static void site_clean(char *s)
+{
+    for (; *s; s++) if (*s == '/' || *s == '+' || *s == '#' || *s <= ' ' || *s > '~') *s = '-';
+}
+
+/* caller holds s_nodes_lock. First live owner keeps a site id; a node silent
+ * for over an hour gives it up (radio swapped on the same site). */
+static void site_claim(lmesh_node_t *n, uint32_t now)
+{
+    n->site_dup = false;
+    if (!n->site[0]) return;
+    for (int i = 0; i < s_nnodes; i++) {
+        lmesh_node_t *o = &s_nodes[i];
+        if (o == n || o->site_dup || strcmp(o->site, n->site) != 0) continue;
+        if (now - o->last_seen_s > 3600) { o->site[0] = 0; continue; }
+        n->site_dup = true;
+        ESP_LOGW(TAG, "site '%s' from 0x%04X already used by 0x%04X; using node number", n->site, n->addr, o->addr);
+    }
+}
+
 static void copy_field(char *dst, size_t n, const uint8_t **p, const uint8_t *end)
 {
     size_t i = 0;
@@ -153,7 +202,11 @@ static void deliver(uint16_t src, const uint8_t *hdr, const uint8_t *data, uint1
         copy_field(n->name, sizeof n->name, &p, end);
         copy_field(n->kind, sizeof n->kind, &p, end);
         copy_field(n->fw, sizeof n->fw, &p, end);
-        ESP_LOGI(TAG, "announce 0x%04X name=%s kind=%s fw=%s", src, n->name, n->kind, n->fw);
+        copy_field(n->site, sizeof n->site, &p, end);
+        site_clean(n->site);
+        site_claim(n, n->last_seen_s);
+        ESP_LOGI(TAG, "announce 0x%04X name=%s kind=%s fw=%s site=%s%s", src, n->name, n->kind, n->fw,
+                 n->site, n->site_dup ? " (DUPLICATE)" : "");
     }
     xSemaphoreGive(s_nodes_lock);
 
@@ -171,6 +224,13 @@ static void deliver(uint16_t src, const uint8_t *hdr, const uint8_t *data, uint1
         }
         return;
     case LMESH_T_ANNOUNCE:
+        if (s_ann_cb) {
+            char kind[16]; const uint8_t *p = data, *end = data + len;
+            char skip[24];
+            copy_field(skip, sizeof skip, &p, end);
+            copy_field(kind, sizeof kind, &p, end);
+            s_ann_cb(src, kind);
+        }
         return;
     case LMESH_T_UDP:
         for (int i = 0; i < MAX_BINDS; i++)
@@ -274,14 +334,30 @@ esp_err_t lmesh_discover(void)
     return xTaskCreate(discover_task, "discover", 3072, NULL, 5, NULL) == pdPASS ? ESP_OK : ESP_FAIL;
 }
 
-/* gateway announces itself on boot so nodes learn the gw address */
-static void announce_self(void)
+/* ---------------- identity / announce ---------------- */
+
+static struct { char name[24], kind[16], fw[16], site[40]; uint16_t boot_dst; } s_id = {
+    .name = "lmesh", .kind = "gateway", .fw = "1.0.0", .boot_dst = LMESH_BCAST };
+
+void lmesh_set_identity(const char *name, const char *kind, const char *fw, const char *site, uint16_t boot_dst)
 {
-    char buf[64];
-    int n = snprintf(buf, sizeof buf, "%s", g_cfg.hostname) + 1;
-    n += snprintf(buf + n, sizeof buf - n, "gateway") + 1;
-    n += snprintf(buf + n, sizeof buf - n, "1.0.0") + 1;
-    lmesh_send(LMESH_BCAST, LMESH_T_ANNOUNCE, lmesh_next_seq(), 0, 0, (uint8_t *)buf, n);
+    snprintf(s_id.name, sizeof s_id.name, "%s", name ? name : "");
+    snprintf(s_id.kind, sizeof s_id.kind, "%s", kind ? kind : "");
+    snprintf(s_id.fw, sizeof s_id.fw, "%s", fw ? fw : "");
+    snprintf(s_id.site, sizeof s_id.site, "%s", site ? site : "");
+    s_id.boot_dst = boot_dst;
+}
+
+void lmesh_on_announce(lmesh_announce_cb_t cb) { s_ann_cb = cb; }
+
+esp_err_t lmesh_announce(uint16_t dst)
+{
+    char buf[112];
+    int n = snprintf(buf, sizeof buf, "%s", s_id.name) + 1;
+    n += snprintf(buf + n, sizeof buf - n, "%s", s_id.kind) + 1;
+    n += snprintf(buf + n, sizeof buf - n, "%s", s_id.fw) + 1;
+    if (s_id.site[0]) n += snprintf(buf + n, sizeof buf - n, "%s", s_id.site) + 1;
+    return lmesh_send(dst, LMESH_T_ANNOUNCE, lmesh_next_seq(), 0, 0, (uint8_t *)buf, n);
 }
 
 void lmesh_init(void)
@@ -296,6 +372,6 @@ void lmesh_init(void)
 esp_err_t lmesh_start(void)
 {
     esp_err_t e = e52_init(rx_cb);
-    if (e == ESP_OK) announce_self();
+    if (e == ESP_OK) lmesh_announce(s_id.boot_dst);
     return e;
 }

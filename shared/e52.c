@@ -352,7 +352,7 @@ esp_err_t e52_apply_config(char *log, size_t ll)
 {
     char cmds[12][40];
     int n = 0;
-    gw_cfg_t *c = &g_cfg;
+    __typeof__(g_cfg) *c = &g_cfg;    /* shared with node firmware (different cfg struct) */
     snprintf(cmds[n++], 40, "AT+HEAD=1");
     snprintf(cmds[n++], 40, "AT+BACK=0");
     snprintf(cmds[n++], 40, "AT+SRC_PORT=1,1");

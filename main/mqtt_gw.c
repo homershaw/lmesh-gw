@@ -43,8 +43,9 @@ static void on_mesh_1883(const lmesh_dgram_t *d)
     const uint8_t *z = memchr(d->data, 0, d->len);
     if (!z || z == d->data) return;
     size_t tl = z - d->data;
-    char topic[160];
-    int n = snprintf(topic, sizeof topic, "%s/%04X/", s_base, d->src);
+    char topic[160], lvl[40];
+    lmesh_node_topic(d->src, lvl, sizeof lvl);
+    int n = snprintf(topic, sizeof topic, "%s/%s/", s_base, lvl);
     if (n + tl >= sizeof topic) return;
     memcpy(topic + n, d->data, tl);
     topic[n + tl] = 0;
@@ -70,14 +71,14 @@ static void dn_task(void *a)
 static void handle_downlink(const char *topic, int tl, const char *data, int dl)
 {
     size_t bl = strlen(s_base);
-    /* <base>/<NODE>/set/<sub> */
-    if (tl < (int)bl + 10 || strncmp(topic, s_base, bl) != 0 || topic[bl] != '/') return;
-    const char *p = topic + bl + 1;
-    char hex[5] = { 0 };
-    memcpy(hex, p, 4);
-    if (strncmp(p + 4, "/set/", 5) != 0) return;
-    uint16_t node = (uint16_t)strtol(hex, NULL, 16);
-    const char *sub = p + 9;
+    /* <base>/<SITE or NODE>/set/<sub> */
+    if (tl < (int)bl + 7 || strncmp(topic, s_base, bl) != 0 || topic[bl] != '/') return;
+    const char *p = topic + bl + 1, *end = topic + tl;
+    const char *sl_ = memchr(p, '/', end - p);
+    if (!sl_ || end - sl_ < 6 || strncmp(sl_, "/set/", 5) != 0) return;
+    uint16_t node;
+    if (!lmesh_topic_to_addr(p, sl_ - p, &node)) { ESP_LOGW(TAG, "downlink: unknown site '%.*s'", (int)(sl_ - p), p); return; }
+    const char *sub = sl_ + 5;
     int sl = tl - (sub - topic);
     if (sl <= 0) return;
     static dn_msg_t m;           /* only used from MQTT task */
@@ -134,9 +135,9 @@ static void stats_task(void *a)
         int n = lmesh_nodes(nodes, LMESH_MAX_NODES);
         uint32_t now = esp_timer_get_time() / 1000000LL;
         size_t o = snprintf(buf, sizeof buf, "[");
-        for (int i = 0; i < n && o < sizeof buf - 160; i++)
-            o += snprintf(buf + o, sizeof buf - o, "%s{\"addr\":\"%04X\",\"name\":\"%s\",\"kind\":\"%s\",\"age\":%lu,\"rtt\":%ld}",
-                          i ? "," : "", nodes[i].addr, nodes[i].name, nodes[i].kind,
+        for (int i = 0; i < n && o < sizeof buf - 200; i++)
+            o += snprintf(buf + o, sizeof buf - o, "%s{\"addr\":\"%04X\",\"site\":\"%s\",\"name\":\"%s\",\"kind\":\"%s\",\"age\":%lu,\"rtt\":%ld}",
+                          i ? "," : "", nodes[i].addr, nodes[i].site, nodes[i].name, nodes[i].kind,
                           (unsigned long)(now - nodes[i].last_seen_s), (long)nodes[i].rtt_ms);
         snprintf(buf + o, sizeof buf - o, "]");
         snprintf(t, sizeof t, "%s/gw/nodes", s_base);
@@ -173,5 +174,6 @@ void mqtt_gw_start(void)
     s_cli = esp_mqtt_client_init(&mc);
     esp_mqtt_client_register_event(s_cli, ESP_EVENT_ANY_ID, on_mqtt, NULL);
     xTaskCreate(stats_task, "mqtt_st", 4096, NULL, 3, NULL);
-    if (wifi_sta_connected()) mqtt_gw_on_network(true);
+    /* AP-only gateway: the broker can be on the AP side (laptop/Pi on site) */
+    if (wifi_sta_connected() || !g_cfg.sta_ssid[0]) mqtt_gw_on_network(true);
 }

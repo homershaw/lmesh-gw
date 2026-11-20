@@ -217,6 +217,8 @@ static esp_err_t h_nodes(httpd_req_t *r)
         cJSON_AddStringToObject(e, "ip", ip);
         cJSON_AddStringToObject(e, "type", n[i].addr & 0x8000 ? "terminal" : "router");
         cJSON_AddStringToObject(e, "name", n[i].name);
+        cJSON_AddStringToObject(e, "site", n[i].site);
+        cJSON_AddBoolToObject(e, "site_dup", n[i].site_dup);
         cJSON_AddStringToObject(e, "kind", n[i].kind);
         cJSON_AddStringToObject(e, "fw", n[i].fw);
         cJSON_AddNumberToObject(e, "age", now - n[i].last_seen_s);
