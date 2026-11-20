@@ -1,0 +1,17 @@
+menu "LoRa Mesh Gateway"
+    config LMGW_E52_UART_NUM
+        int "UART port for E52"
+        default 1
+    config LMGW_E52_TX_GPIO
+        int "ESP TX -> E52 RXD (pin 10) GPIO"
+        default 17
+    config LMGW_E52_RX_GPIO
+        int "ESP RX <- E52 TXD (pin 9) GPIO"
+        default 18
+    config LMGW_E52_RST_GPIO
+        int "E52 NRST (pin 17) GPIO, -1 = not wired"
+        default -1
+    config LMGW_E52_BAUD
+        int "E52 UART baud"
+        default 115200
+endmenu

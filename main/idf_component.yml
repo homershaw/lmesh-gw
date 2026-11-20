@@ -1,0 +1,12 @@
+## esp-mqtt and cJSON moved out of ESP-IDF in v6.0 (S31 needs v6.x).
+## On IDF 5.x they are built in and these rules skip them.
+dependencies:
+  idf: ">=5.3"
+  espressif/mqtt:
+    version: "*"
+    rules:
+      - if: "idf_version >=6.0"
+  espressif/cjson:
+    version: "*"
+    rules:
+      - if: "idf_version >=6.0"

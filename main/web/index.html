@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LMESH Gateway</title>
+<style>
+:root{--bg:#0f1419;--pn:#182029;--ln:#2a3542;--tx:#d8dee6;--mu:#8a96a3;--ac:#3fa9f5;--ok:#3ecf8e;--bad:#ef5b5b}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--pn);border-bottom:1px solid var(--ln)}
+header b{font-size:16px}header span{color:var(--mu)}
+nav{display:flex;gap:4px;padding:8px 16px;flex-wrap:wrap}
+nav button{background:none;border:1px solid var(--ln);color:var(--tx);padding:6px 12px;border-radius:6px;cursor:pointer}
+nav button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+main{padding:0 16px 24px;max-width:1100px}section{display:none}section.on{display:block}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:14px;margin:10px 0}
+h3{margin:0 0 10px;font-size:14px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.kv{background:var(--bg);border-radius:6px;padding:8px 10px}.kv i{display:block;color:var(--mu);font-style:normal;font-size:12px}
+label{display:block;margin:6px 0 2px;color:var(--mu);font-size:12px}
+input,select,textarea{width:100%;padding:7px;background:var(--bg);border:1px solid var(--ln);color:var(--tx);border-radius:5px;font:inherit}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.btn{background:var(--ac);border:0;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;margin:10px 6px 0 0}
+.btn.sec{background:var(--ln)}.btn.warn{background:#c77a1a}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:6px;border-bottom:1px solid var(--ln)}th{color:var(--mu);font-weight:500}
+pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max-height:300px;overflow:auto;margin:10px 0 0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.mu{color:var(--mu);font-size:12px}
+</style></head><body>
+<header><b>LMESH Gateway</b><span id="hid"></span><span id="hst"></span></header>
+<nav id="nav"></nav>
+<main>
+<section id="t-status">
+ <div class="card"><h3>Gateway</h3><div class="grid" id="st"></div></div>
+</section>
+
+<section id="t-nodes">
+ <div class="card"><h3>Mesh nodes</h3>
+  <button class="btn" onclick="disc()">Discover (broadcast ping)</button><button class="btn sec" onclick="nodes()">Refresh</button>
+  <span class="mu" id="discmsg"></span>
+  <table><thead><tr><th>Addr</th><th>IPv4</th><th>Type</th><th>Name</th><th>Kind</th><th>Last seen</th><th>Pkts</th><th>RTT</th><th></th></tr></thead><tbody id="nt"></tbody></table>
+ </div>
+</section>
+
+<section id="t-mbtest">
+ <div class="card"><h3>Modbus test to end device</h3>
+  <div class="row">
+   <div><label>Unit ID</label><input id="m_unit" value="1"></div>
+   <div><label>Node override (blank = use map)</label><input id="m_node" placeholder="e.g. 0x0005"></div>
+   <div><label>Function</label><select id="m_fc">
+    <option value="3">03 Read Holding</option><option value="4">04 Read Input</option>
+    <option value="1">01 Read Coils</option><option value="2">02 Read Discrete</option>
+    <option value="6">06 Write Single Reg</option><option value="16">16 Write Multiple Regs</option>
+    <option value="5">05 Write Single Coil</option><option value="15">15 Write Multiple Coils</option></select></div>
+   <div><label>Start address (0-based)</label><input id="m_addr" value="0"></div>
+   <div><label>Count</label><input id="m_cnt" value="10"></div>
+   <div><label>Write values (comma sep)</label><input id="m_vals" placeholder="100,200"></div>
+  </div>
+  <button class="btn" onclick="mb()">Send</button><label style="display:inline"><input type="checkbox" id="m_poll" style="width:auto"> poll every 10 s</label>
+  <pre id="m_out">—</pre>
+ </div>
+</section>
+
+<section id="t-radio">
+ <div class="card"><h3>E52 radio (902–928 MHz)</h3>
+  <div class="row">
+   <div><label>Channel</label><select id="e52_channel"></select></div>
+   <div><label>Air rate</label><select id="e52_rate"><option value="2">2 – 7 kbps (longest range)</option><option value="1">1 – 21.875 kbps</option><option value="0">0 – 62.5 kbps</option></select></div>
+   <div><label>TX power dBm (-9..22)</label><input id="e52_power" type="number" min="-9" max="22"></div>
+   <div><label>PAN ID (0..65534)</label><input id="e52_panid"></div>
+   <div><label>Gateway mesh address (router 0..0x7FFF)</label><input id="e52_addr"></div>
+   <div><label>CSMA random backoff ms</label><input id="e52_csma"></div>
+  </div>
+  <button class="btn" onclick="save(radioKeys)">Save</button><button class="btn warn" onclick="apply()">Save + apply to E52</button>
+  <pre id="e_out" style="display:none"></pre>
+ </div>
+ <div class="card"><h3>E52 UART (reboot to apply)</h3>
+  <div class="row">
+   <div><label>ESP TX GPIO → E52 pin 10 RXD</label><input id="uart_tx" type="number"></div>
+   <div><label>ESP RX GPIO ← E52 pin 9 TXD</label><input id="uart_rx" type="number"></div>
+   <div><label>E52 NRST GPIO (-1 none)</label><input id="uart_rst" type="number"></div>
+   <div><label>Baud</label><input id="uart_baud" type="number"></div>
+  </div>
+  <button class="btn" onclick="save(uartKeys)">Save</button><button class="btn sec" onclick="reboot()">Reboot</button>
+ </div>
+ <div class="card"><h3>AT console</h3>
+  <div style="display:flex;gap:8px"><input id="at" placeholder="AT+INFO=?" onkeydown="if(event.key=='Enter')at()"><button class="btn" style="margin:0" onclick="at()">Send</button></div>
+  <div class="mu" style="margin-top:6px">Quick: <a href="#" onclick="atq('AT+INFO=?')">INFO</a> · <a href="#" onclick="atq('AT+ROUTER_READ=?')">ROUTER_READ</a> · <a href="#" onclick="atq('AT+MAC=?')">MAC</a> · <a href="#" onclick="atq('AT+FWCODE=?')">FWCODE</a></div>
+  <pre id="at_out"></pre>
+ </div>
+</section>
+
+<section id="t-net">
+ <div class="card"><h3>Wi-Fi</h3>
+  <div class="row">
+   <div><label>Station SSID</label><input id="sta_ssid"></div>
+   <div><label>Station password</label><input id="sta_pass" type="password"></div>
+   <div><label>AP SSID (blank = LMESH-GW-xxxx)</label><input id="ap_ssid"></div>
+   <div><label>AP password (≥8)</label><input id="ap_pass" type="password"></div>
+   <div><label>Hostname</label><input id="hostname"></div>
+  </div>
+ </div>
+ <div class="card"><h3>MQTT</h3>
+  <div class="row">
+   <div><label>Enabled</label><select id="mqtt_en"><option value="false">No</option><option value="true">Yes</option></select></div>
+   <div><label>Broker URI</label><input id="mqtt_uri" placeholder="mqtt://192.168.1.10:1883"></div>
+   <div><label>User</label><input id="mqtt_user"></div>
+   <div><label>Password</label><input id="mqtt_pass" type="password"></div>
+   <div><label>Base topic (blank = lmesh/&lt;id&gt;)</label><input id="mqtt_base"></div>
+  </div>
+ </div>
+ <div class="card"><h3>Modbus TCP</h3>
+  <div class="row">
+   <div><label>Port</label><input id="mb_port" type="number"></div>
+   <div><label>Mesh timeout ms</label><input id="mb_timeout_ms" type="number"></div>
+  </div>
+ </div>
+ <button class="btn" onclick="save(netKeys)">Save</button><button class="btn sec" onclick="reboot()">Reboot</button>
+</section>
+
+<section id="t-map">
+ <div class="card"><h3>Modbus unit → mesh node map</h3>
+  <p class="mu">Unmapped units go to the node whose mesh address equals the unit ID. Unit 255 = gateway diagnostics (FC3/4, regs 0–15).</p>
+  <table><thead><tr><th>TCP unit</th><th>Mesh node (dec or 0x)</th><th>RS-485 unit (0 = same)</th><th></th></tr></thead><tbody id="mt"></tbody></table>
+  <button class="btn sec" onclick="addMap()">Add row</button><button class="btn" onclick="saveMap()">Save map</button>
+ </div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const tabs=[['status','Status'],['nodes','Nodes'],['mbtest','Modbus Test'],['radio','Radio / E52'],['net','Wi-Fi / MQTT'],['map','Unit Map']];
+const radioKeys=['e52_channel','e52_rate','e52_power','e52_panid','e52_addr','e52_csma'];
+const uartKeys=['uart_tx','uart_rx','uart_rst','uart_baud'];
+const netKeys=['sta_ssid','sta_pass','ap_ssid','ap_pass','hostname','mqtt_en','mqtt_uri','mqtt_user','mqtt_pass','mqtt_base','mb_port','mb_timeout_ms'];
+let cfg={},cur='status',pollT=null;
+const api=(u,b)=>fetch(u,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+function show(t){cur=t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+t));
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));if(t=='nodes')nodes();}
+tabs.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.t=k;b.onclick=()=>show(k);$('nav').appendChild(b)});
+for(let c=52;c<=77;c++){const o=document.createElement('option');o.value=c;o.textContent=c+' – '+(850.125+c).toFixed(3)+' MHz';$('e52_channel').appendChild(o)}
+const hex=n=>'0x'+Number(n).toString(16).toUpperCase().padStart(4,'0');
+const age=s=>s<60?s+' s':s<3600?Math.floor(s/60)+' m':Math.floor(s/3600)+' h';
+function status(){api('/api/status').then(s=>{
+ $('hid').textContent='ID '+s.id+' · fw '+s.fw;
+ $('hst').innerHTML=(s.sta_ip!='-'?'<span class=ok>Wi-Fi '+s.sta_ip+'</span>':'<span class=bad>Wi-Fi off</span>')+' · '+(s.mqtt?'<span class=ok>MQTT</span>':'<span class=mu>MQTT off</span>');
+ const kv={'Uptime':age(s.uptime),'Free heap':s.heap,'STA IP':s.sta_ip+(s.rssi?' ('+s.rssi+' dBm)':''),'AP IP':s.ap_ip,
+ 'Mesh IPv4':s.mesh_ip,'Frequency':s.freq+' MHz','LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'RX junk':s.rx_junk,
+ 'Modbus reqs / timeouts':s.mb_reqs+' / '+s.mb_timeouts,'Modbus clients':s.mb_clients,'MQTT base':s.mqtt_base,'MQTT up / down':s.mqtt_up+' / '+s.mqtt_down};
+ $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
+function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td>
+ <td><button class="btn sec" style="margin:0" onclick="ping(${n.addr_dec},this)">Ping</button></td></tr>`).join('')||'<tr><td colspan=9 class=mu>No nodes heard yet</td></tr>'})}
+function ping(a,b){b.textContent='…';api('/api/ping',{node:a}).then(r=>{b.textContent=r.rtt<0?'no reply':r.rtt+' ms';setTimeout(nodes,500)})}
+function disc(){api('/api/discover',{}).then(()=>{$('discmsg').textContent='Listening 15 s for replies…';setTimeout(()=>{nodes();$('discmsg').textContent=''},15500)})}
+function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...uartKeys,...netKeys]){if($(k))$(k).value=String(c[k])}
+ $('e52_panid').value=hex(c.e52_panid);$('e52_addr').value=hex(c.e52_addr);renderMap()})}
+function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='mqtt_en')v=v=='true';else if($(k).type=='number')v=Number(v);o[k]=v});return o}
+function save(keys){return api('/api/config',collect(keys)).then(r=>{alert(r.ok?r.note:'Save failed');loadCfg();return r})}
+function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving and programming E52…';
+ api('/api/config',collect(radioKeys)).then(()=>api('/api/e52/apply',{})).then(r=>{$('e_out').textContent=(r.ok?'OK\n':'Some commands failed\n')+r.log;loadCfg()})}
+function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
+ api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
+function atq(c){$('at').value=c;at();return false}
+function reboot(){if(confirm('Reboot gateway?'))api('/api/reboot',{})}
+function mb(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
+ const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};
+ if($('m_node').value.trim())b.node=$('m_node').value.trim();
+ $('m_out').textContent='Waiting for mesh reply…';
+ api('/api/modbus',b).then(r=>{let t=`node ${r.node} · ${r.ms} ms\n`;if(r.err)t+='ERROR: '+r.err;else{t+='raw: '+r.raw+'\n';
+  if(r.values&&r.values.length)t+=r.values.map((v,i)=>(b.addr+i)+': '+v).join('\n');else t+='write OK'}$('m_out').textContent=t})}
+$('m_poll').onchange=e=>{clearInterval(pollT);if(e.target.checked){mb();pollT=setInterval(mb,10000)}};
+function renderMap(){$('mt').innerHTML='';(cfg.mb_map||[]).forEach(m=>addMap(m))}
+function addMap(m={unit:'',node:'',dst_unit:0}){const tr=document.createElement('tr');
+ tr.innerHTML=`<td><input value="${m.unit}"></td><td><input value="${m.node===''?'':hex(m.node)}"></td><td><input value="${m.dst_unit}"></td><td><button class="btn sec" style="margin:0">✕</button></td>`;
+ tr.querySelector('button').onclick=()=>tr.remove();$('mt').appendChild(tr)}
+function saveMap(){const m=[...$('mt').querySelectorAll('tr')].map(tr=>{const i=tr.querySelectorAll('input');return{unit:Number(i[0].value),node:i[1].value.trim(),dst_unit:Number(i[2].value)||0}}).filter(x=>x.node!==''&&x.unit>0);
+ api('/api/config',{mb_map:m}).then(r=>{alert(r.ok?'Map saved (takes effect immediately)':'Save failed');loadCfg()})}
+show('status');status();loadCfg();setInterval(()=>{status();if(cur=='nodes')nodes()},5000);
+</script></body></html>
