@@ -4,7 +4,7 @@ Border gateway for a LoRa mesh (902–928 MHz). It carries UDP/IPv4 datagrams ac
 
 | Service | Where |
 |---|---|
-| Web UI (status, nodes, Modbus test, E52 config, Wi-Fi/MQTT, unit map) | `http://192.168.4.1` on AP `LMESH-GW-xxxx` (pw `lmesh1234`), or the STA IP |
+| Web UI (status, nodes, Modbus test, E52 config, Wi-Fi/MQTT, unit map) | `http://192.168.4.1` on AP `LMESH-GW-xxxx` (pw `lmesh1234`), or the STA IP. Login: user `admin`, password = web password if set, else the AP password |
 | Modbus TCP server | port 502 → mesh node (unit map, or unit N → node N) |
 | Gateway diagnostics | Modbus unit 255, FC3/4, regs 0–15 |
 | MQTT client bridge | `<base>/<NODE>/…` up, `<base>/<NODE>/set/…` down |
@@ -87,4 +87,6 @@ CSMA backoff (`e52_csma`) defaults to 40 ms (factory 127). On the bench this cut
 * The E52 query-reply format (`AT+INFO=?` etc.) isn't documented. The parser treats any text up to a 20 ms gap as the reply.
 * The web Modbus test and Ping run in the HTTP server task, so the UI pauses until the reply or timeout.
 * No RSSI per packet: the E52 doesn't send it to the UART.
-* The web UI has no login yet. Keep the AP password set, and don't expose port 80 to the internet.
+* The web UI uses HTTP Basic login (user `admin`). That is plain HTTP, so the password is only as private as the network: keep the AP on WPA2 and don't expose port 80 to the internet. Modbus TCP (502) has no authentication; that's the protocol.
+* With no Station SSID set, the gateway runs AP-only (no idle STA interface). Setting an SSID switches to AP+STA after a reboot.
+* The AP's DHCP leases live in RAM. After a gateway reboot, clients get fresh addresses; a client that kept its old one can briefly clash until it renews.

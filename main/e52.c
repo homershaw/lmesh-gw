@@ -339,7 +339,7 @@ esp_err_t e52_reset(void)
 
 /* Settings the module does not keep across a reset (CSMA_RNG verified on
  * FW 7460-1-15), plus HEAD/BACK which our parser depends on. */
-static void runtime_setup(void)
+void e52_runtime_setup(void)
 {
     char cmd[32];
     if (e52_at("AT+HEAD=1", NULL, 0, 800) == ESP_ERR_TIMEOUT) e52_at("AT+HEAD=1", NULL, 0, 800);
@@ -379,7 +379,7 @@ esp_err_t e52_apply_config(char *log, size_t ll)
         vTaskDelay(pdMS_TO_TICKS(50));
     }
     e52_reset();
-    runtime_setup();
+    e52_runtime_setup();
     ESP_LOGI(TAG, "config applied, %d failures", fails);
     return fails ? ESP_FAIL : ESP_OK;
 }
@@ -413,7 +413,7 @@ esp_err_t e52_init(e52_rx_cb_t cb)
                  UARTN, g_cfg.uart_tx, g_cfg.uart_rx, (unsigned long)g_cfg.uart_baud);
         return ESP_ERR_TIMEOUT;
     }
-    runtime_setup();
+    e52_runtime_setup();
     if (e52_at("AT+SRC_ADDR=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "SRC_ADDR: %s", r);
     if (e52_at("AT+CHANNEL=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "CHANNEL: %s", r);
     return ESP_OK;

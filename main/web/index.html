@@ -94,6 +94,7 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
    <div><label>AP SSID (blank = LMESH-GW-xxxx)</label><input id="ap_ssid"></div>
    <div><label>AP password (≥8)</label><input id="ap_pass" type="password"></div>
    <div><label>Hostname</label><input id="hostname"></div>
+   <div><label>Web login password (user admin; blank = AP password)</label><input id="web_pass" type="password"></div>
   </div>
  </div>
  <div class="card"><h3>MQTT</h3>
@@ -127,7 +128,7 @@ const $=id=>document.getElementById(id);
 const tabs=[['status','Status'],['nodes','Nodes'],['mbtest','Modbus Test'],['radio','Radio / E52'],['net','Wi-Fi / MQTT'],['map','Unit Map']];
 const radioKeys=['e52_channel','e52_rate','e52_power','e52_panid','e52_addr','e52_csma'];
 const uartKeys=['uart_tx','uart_rx','uart_rst','uart_baud'];
-const netKeys=['sta_ssid','sta_pass','ap_ssid','ap_pass','hostname','mqtt_en','mqtt_uri','mqtt_user','mqtt_pass','mqtt_base','mb_port','mb_timeout_ms'];
+const netKeys=['sta_ssid','sta_pass','ap_ssid','ap_pass','hostname','web_pass','mqtt_en','mqtt_uri','mqtt_user','mqtt_pass','mqtt_base','mb_port','mb_timeout_ms'];
 let cfg={},cur='status',pollT=null;
 const api=(u,b)=>fetch(u,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 function show(t){cur=t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+t));
@@ -141,7 +142,7 @@ function status(){api('/api/status').then(s=>{
  $('hst').innerHTML=(s.sta_ip!='-'?'<span class=ok>Wi-Fi '+s.sta_ip+'</span>':'<span class=bad>Wi-Fi off</span>')+' · '+(s.mqtt?'<span class=ok>MQTT</span>':'<span class=mu>MQTT off</span>');
  const kv={'Uptime':age(s.uptime),'Free heap':s.heap,'STA IP':s.sta_ip+(s.rssi?' ('+s.rssi+' dBm)':''),'AP IP':s.ap_ip,
  'Mesh IPv4':s.mesh_ip,'Frequency':s.freq+' MHz','LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'RX junk':s.rx_junk,
- 'Modbus reqs / timeouts':s.mb_reqs+' / '+s.mb_timeouts,'Modbus clients':s.mb_clients,'MQTT base':s.mqtt_base,'MQTT up / down':s.mqtt_up+' / '+s.mqtt_down};
+ 'Modbus reqs / retries / timeouts':s.mb_reqs+' / '+s.mb_retries+' / '+s.mb_timeouts,'Modbus clients':s.mb_clients,'MQTT base':s.mqtt_base,'MQTT up / down':s.mqtt_up+' / '+s.mqtt_down};
  $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
 function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td>
  <td><button class="btn sec" style="margin:0" onclick="ping(${n.addr_dec},this)">Ping</button></td></tr>`).join('')||'<tr><td colspan=9 class=mu>No nodes heard yet</td></tr>'})}

@@ -1,13 +1,14 @@
 """Ping RTT vs E52 CSMA_RNG.  python csmabench.py COM4 127 60 20"""
-import json, os, subprocess, sys, time, urllib.request
+import base64, json, os, subprocess, sys, time, urllib.request
 
 PORT, VALS = sys.argv[1], [int(x) for x in sys.argv[2:]]
 PY, HERE = sys.executable, os.path.dirname(os.path.abspath(__file__))
+AUTH = 'Basic ' + base64.b64encode(os.environ.get('LMGW_AUTH', 'admin:lmesh1234').encode()).decode()
 
 
 def api(path, body, timeout=30):
     req = urllib.request.Request('http://192.168.4.1' + path, json.dumps(body).encode(),
-                                 {'Content-Type': 'application/json'})
+                                 {'Content-Type': 'application/json', 'Authorization': AUTH})
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
 
 

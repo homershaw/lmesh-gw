@@ -31,5 +31,7 @@ esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len);
 /* Push g_cfg radio settings to module (saved in module flash) and reset it */
 esp_err_t e52_apply_config(char *log, size_t log_len);
 esp_err_t e52_reset(void);
+/* Re-send settings the module forgets on reset (HEAD/BACK/CSMA_RNG). */
+void e52_runtime_setup(void);
 void e52_get_stats(e52_stats_t *s);
 uint32_t e52_airtime_ms(size_t len);

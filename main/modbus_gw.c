@@ -48,7 +48,7 @@ static int mb_retry_ms(size_t req_len)
     return b + (int)e52_airtime_ms(req_len) + 2 * (int)e52_airtime_ms(E52_MAX_PAYLOAD);
 }
 
-void modbus_gw_stats(uint32_t *r, uint32_t *t, uint32_t *c) { *r = s_reqs; *t = s_timeouts; *c = s_clients; }
+void modbus_gw_stats(uint32_t *r, uint32_t *t, uint32_t *c, uint32_t *rt) { *r = s_reqs; *t = s_timeouts; *c = s_clients; *rt = s_retries; }
 
 void modbus_gw_resolve(uint8_t unit, uint16_t *node, uint8_t *dst_unit)
 {

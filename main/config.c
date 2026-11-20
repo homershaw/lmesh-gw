@@ -71,6 +71,7 @@ bool cfg_from_json(const char *json)
     jstr(o, "ap_ssid", c->ap_ssid, sizeof c->ap_ssid, false);
     jstr(o, "ap_pass", c->ap_pass, sizeof c->ap_pass, true);
     jstr(o, "hostname", c->hostname, sizeof c->hostname, false);
+    jstr(o, "web_pass", c->web_pass, sizeof c->web_pass, true);
 
     cJSON *b = cJSON_GetObjectItem(o, "mqtt_en");
     if (cJSON_IsBool(b)) c->mqtt_en = cJSON_IsTrue(b);
@@ -121,6 +122,7 @@ char *cfg_to_json(bool secrets)
     cJSON_AddStringToObject(o, "ap_ssid", c->ap_ssid);
     cJSON_AddStringToObject(o, "ap_pass", secrets ? c->ap_pass : MASK);
     cJSON_AddStringToObject(o, "hostname", c->hostname);
+    cJSON_AddStringToObject(o, "web_pass", secrets ? c->web_pass : (c->web_pass[0] ? MASK : ""));
     cJSON_AddBoolToObject(o, "mqtt_en", c->mqtt_en);
     cJSON_AddStringToObject(o, "mqtt_uri", c->mqtt_uri);
     cJSON_AddStringToObject(o, "mqtt_user", c->mqtt_user);

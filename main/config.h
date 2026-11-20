@@ -17,6 +17,7 @@ typedef struct {
     char ap_ssid[33];
     char ap_pass[65];
     char hostname[32];
+    char web_pass[65];       /* web UI login (user "admin"); empty = use ap_pass */
 
     /* MQTT */
     bool mqtt_en;

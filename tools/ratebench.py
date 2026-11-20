@@ -1,7 +1,7 @@
 """Benchmark Modbus/ping latency through the gateway at several E52 air rates.
    python ratebench.py COM4 2 1 0
 """
-import json, os, socket, struct, subprocess, sys, time, urllib.request
+import base64, json, os, socket, struct, subprocess, sys, time, urllib.request
 
 PORT = sys.argv[1]
 RATES = [int(x) for x in sys.argv[2:]] or [2, 1, 0]
@@ -9,12 +9,13 @@ GW = '192.168.4.1'
 PY = sys.executable
 HERE = os.path.dirname(os.path.abspath(__file__))
 NAMES = {0: '62.5k', 1: '21.875k', 2: '7k'}
+AUTH = 'Basic ' + base64.b64encode(os.environ.get('LMGW_AUTH', 'admin:lmesh1234').encode()).decode()
 
 
 def api(path, body=None, timeout=30):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(f'http://{GW}{path}', data=data, method='POST' if data else 'GET',
-                                 headers={'Content-Type': 'application/json'})
+                                 headers={'Content-Type': 'application/json', 'Authorization': AUTH})
     return json.loads(urllib.request.urlopen(req, timeout=timeout).read())
 
 
