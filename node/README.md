@@ -36,7 +36,7 @@ The E52 and LMESH code is shared with the gateway (`../shared`).
 ## First setup
 
 1. Join `LMESH-NODE-xxxx`, open `http://192.168.4.1`, and log in as `admin` / `lmesh1234`.
-2. **Settings:** set the site ID (LSD, e.g. `01-02-034-05W5`), the RS-485 baud/parity, and a new AP password.
+2. **Settings:** set the site ID (or click ✎ in the Site column of the gateway's Nodes page; it is sent over the mesh) (LSD, e.g. `01-02-034-05W5`), the RS-485 baud/parity, and a new AP password.
 3. **Radio:** check that channel, rate, PAN ID and CSMA match the gateway (the defaults do). The node address defaults to a value derived from the MAC (0x0100–0x7FFE); change it if you keep an address plan. Then click **Save & apply to E52**.
 4. **RS-485 test:** read a few registers to confirm wiring and settings.
 5. **Poll list:** add points (name, unit, function, address, type, scale), set the interval, and save.
@@ -50,6 +50,8 @@ The E52 and LMESH code is shared with the gateway (`../shared`).
 | `<base>/<site>/set/write` | down | `{"name":"pump_sp","value":12.5}`, or raw `{"unit":1,"addr":100,"value":5,"type":"u16"}` |
 | `<base>/<site>/write/ack` | up | `{"ok":true}` or `{"ok":false,"err":"rtu timeout"}` |
 | `<base>/<site>/set/poll` | down | (any payload) triggers an immediate poll |
+| `<base>/<site>/set/config` | down | `{"site":"…","name":"…","poll_s":60,"poll":[…]}`. Only these keys are accepted; radio, RS-485 and Wi-Fi settings can only be changed locally. |
+| `<base>/<site>/config/ack` | up | `{"ok":true,"site":"…"}` |
 
 Notes on topics and delivery:
 

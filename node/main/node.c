@@ -283,6 +283,31 @@ static void do_write(const char *json)
     else { write_ack(true, NULL); node_poll_now(); }
 }
 
+/* "config" {"site":"..","name":"..","poll_s":60,"poll":[...]} from the gateway
+ * page or MQTT set/config. Radio, RS-485 and Wi-Fi settings stay local-only. */
+static void do_config(const char *json)
+{
+    static const char *allowed[] = { "site", "name", "poll_s", "poll" };
+    cJSON *in = cJSON_Parse(json), *o = cJSON_CreateObject();
+    int n = 0;
+    for (int i = 0; in && i < 4; i++) {
+        cJSON *v = cJSON_DetachItemFromObject(in, allowed[i]);
+        if (v) { cJSON_AddItemToObject(o, allowed[i], v); n++; }
+    }
+    char *s = n ? cJSON_PrintUnformatted(o) : NULL;
+    bool ok = s && cfg_from_json(s) && cfg_save();
+    free(s);
+    cJSON_Delete(in);
+    cJSON_Delete(o);
+    ESP_LOGI(TAG, "remote config (%d keys): %s", n, ok ? "saved" : "rejected");
+    char b[96];
+    xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
+    snprintf(b, sizeof b, "{\"ok\":%s,\"site\":\"%s\"}", ok ? "true" : "false", g_cfg.site);
+    xSemaphoreGive(g_cfg_lock);
+    if (ok) { set_identity(); lmesh_announce(s_gw); }   /* gateway switches topic right away */
+    publish("config/ack", b);
+}
+
 static void do_downlink(const work_t *w)
 {
     const uint8_t *z = memchr(w->data, 0, w->len);
@@ -296,6 +321,7 @@ static void do_downlink(const work_t *w)
     if (!strcmp(sub, "write")) do_write(payload);
     else if (!strcmp(sub, "poll")) node_poll_now();
     else if (!strcmp(sub, "status")) publish_status();
+    else if (!strcmp(sub, "config")) do_config(payload);
     else ESP_LOGW(TAG, "unknown downlink '%s'", sub);
 }
 

@@ -241,6 +241,29 @@ static esp_err_t h_ping(httpd_req_t *r)
     return send_json(r, o);
 }
 
+/* set a field node's site id / name over the mesh (node answers on config/ack + re-ANNOUNCE) */
+static esp_err_t h_node_cfg(httpd_req_t *r)
+{
+    cJSON *in = read_json(r);
+    cJSON *o = cJSON_CreateObject();
+    int node = in ? jint(in, "node", -1) : -1;
+    if (node < 1 || node > 0x7FFF) { cJSON_Delete(in); cJSON_AddStringToObject(o, "err", "bad node"); return send_json(r, o); }
+    cJSON *p = cJSON_CreateObject();
+    cJSON *s = cJSON_GetObjectItem(in, "site"), *n = cJSON_GetObjectItem(in, "name");
+    if (cJSON_IsString(s)) cJSON_AddStringToObject(p, "site", s->valuestring);
+    if (cJSON_IsString(n)) cJSON_AddStringToObject(p, "name", n->valuestring);
+    char *js = cJSON_PrintUnformatted(p);
+    cJSON_Delete(p);
+    cJSON_Delete(in);
+    uint8_t buf[200];
+    int l = js ? snprintf((char *)buf, sizeof buf, "config%c%s", 0, js) : -1;
+    free(js);
+    esp_err_t e = (l > 0 && l < (int)sizeof buf)
+        ? lmesh_send_udp(node, lmesh_next_seq(), LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, buf, l) : ESP_ERR_INVALID_SIZE;
+    cJSON_AddBoolToObject(o, "ok", e == ESP_OK);
+    return send_json(r, o);
+}
+
 static esp_err_t h_discover(httpd_req_t *r)
 {
     cJSON *o = cJSON_CreateObject();
@@ -376,7 +399,7 @@ void web_start(void)
 {
     httpd_config_t c = HTTPD_DEFAULT_CONFIG();
     c.stack_size = 10240;
-    c.max_uri_handlers = 16;
+    c.max_uri_handlers = 20;
     c.lru_purge_enable = true;
     c.open_fn = on_open;
     s_async_q = xQueueCreate(4, sizeof(httpd_req_t *));
@@ -392,6 +415,7 @@ void web_start(void)
         { .uri = "/api/e52/at", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_at },
         { .uri = "/api/nodes", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_nodes },
         { .uri = "/api/ping", .method = HTTP_POST, .handler = h_async, .user_ctx = h_ping },
+        { .uri = "/api/node/config", .method = HTTP_POST, .handler = h_async, .user_ctx = h_node_cfg },
         { .uri = "/api/discover", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_discover },
         { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_async, .user_ctx = h_modbus },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
