@@ -31,7 +31,9 @@ static void sync_radio_config(void)
     uint32_t stored = 0, now = radio_hash();
     if (nvs_open("lmgw", NVS_READWRITE, &nh) != ESP_OK) return;
     nvs_get_u32(nh, "e52hash", &stored);
-    if (stored != now) {
+    bool module_ok = e52_matches_cfg();
+    if (stored != now || !module_ok) {
+        if (stored == now) ESP_LOGW(TAG, "E52 settings differ from config (new or swapped module?) -> reprogramming");
         ESP_LOGI(TAG, "radio settings changed -> programming E52 (ch %u = %.3f MHz, rate %u, %d dBm, pan 0x%04X, addr 0x%04X)",
                  g_cfg.e52_channel, e52_chan_mhz(g_cfg.e52_channel), g_cfg.e52_rate, g_cfg.e52_power,
                  g_cfg.e52_panid, g_cfg.e52_addr);

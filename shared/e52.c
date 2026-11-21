@@ -14,6 +14,7 @@
  */
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "e52.h"
 #include "config.h"
 #include "freertos/FreeRTOS.h"
@@ -263,6 +264,14 @@ static esp_err_t at_locked(const char *cmd, char *resp, size_t rl, int timeout_m
         return ESP_ERR_TIMEOUT;
     }
     if (resp && rl) { strncpy(resp, tmp, rl - 1); resp[rl - 1] = 0; }
+    /* The module never repeats a command verbatim (it answers "AT+X=OK" or
+     * "AT+X=value"), so an exact copy means our TX is looped back to RX. */
+    size_t cl = strlen(cmd), tl = strcspn(tmp, "\r\n");
+    if (tl == cl && strncmp(tmp, cmd, cl) == 0) {
+        s_st.at_err++;
+        ESP_LOGE(TAG, "%s -> echoed back unchanged: TX is looped to RX, not reaching the E52 (check wiring)", cmd);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
     bool err = strstr(tmp, "ERR") != NULL;
     if (err) s_st.at_err++; else s_st.at_ok++;
     ESP_LOGD(TAG, "%s -> %s", cmd, tmp);
@@ -386,6 +395,27 @@ esp_err_t e52_apply_config(char *log, size_t ll)
 
 void e52_get_stats(e52_stats_t *s) { *s = s_st; }
 
+/* "AT+CHANNEL=0x41,65" -> 65 */
+static bool query_num(const char *cmd, long *out)
+{
+    char r[96];
+    esp_err_t e = e52_at(cmd, r, sizeof r, 800);
+    if (e == ESP_ERR_TIMEOUT) e = e52_at(cmd, r, sizeof r, 800);
+    const char *c = strchr(r, ',');
+    if (e != ESP_OK || !c) return false;
+    *out = strtol(c + 1, NULL, 10);
+    return true;
+}
+
+bool e52_matches_cfg(void)
+{
+    long v;
+    if (!query_num("AT+SRC_ADDR=?", &v) || v != g_cfg.e52_addr) return false;
+    if (!query_num("AT+CHANNEL=?", &v) || v != g_cfg.e52_channel) return false;
+    if (!query_num("AT+PANID=?", &v) || v != g_cfg.e52_panid) return false;
+    return true;
+}
+
 esp_err_t e52_init(e52_rx_cb_t cb)
 {
     s_cb = cb;
@@ -408,10 +438,13 @@ esp_err_t e52_init(e52_rx_cb_t cb)
     vTaskDelay(pdMS_TO_TICKS(300));
 
     char r[128];
-    if (e52_at("AT+HEAD=1", r, sizeof r, 800) == ESP_ERR_TIMEOUT) {
-        ESP_LOGE(TAG, "E52 not answering on UART%d TX=%d RX=%d @%lu - check wiring/baud",
+    esp_err_t e = e52_at("AT+HEAD=1", r, sizeof r, 800);
+    if (e == ESP_ERR_TIMEOUT) e = e52_at("AT+HEAD=1", r, sizeof r, 800);   /* first byte after idle */
+    if (e != ESP_OK) {
+        ESP_LOGE(TAG, "E52 %s on UART%d TX=%d RX=%d @%lu - check wiring/baud",
+                 e == ESP_ERR_INVALID_RESPONSE ? "link is an echo (TX looped to RX)" : "not answering",
                  UARTN, g_cfg.uart_tx, g_cfg.uart_rx, (unsigned long)g_cfg.uart_baud);
-        return ESP_ERR_TIMEOUT;
+        return e;
     }
     e52_runtime_setup();
     if (e52_at("AT+SRC_ADDR=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "SRC_ADDR: %s", r);

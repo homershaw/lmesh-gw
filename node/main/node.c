@@ -387,4 +387,5 @@ void node_start(void)
 void node_after_radio_up(void)
 {
     xTaskCreate(poll_task, "node_poll", 6144, NULL, 5, &s_poll_task);
+    node_identity_changed();     /* boot ANNOUNCE may have gone out before the E52 was programmed */
 }

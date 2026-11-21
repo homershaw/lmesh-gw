@@ -7,7 +7,7 @@ Prints every publish and forwards it to matching subscribers.
 
 Point the gateway at it: MQTT URI mqtt://<this PC's IP>:1883, MQTT enabled.
 """
-import socket, struct, sys, threading, time
+import os, socket, struct, sys, threading, time
 
 def rd_len(sock):
     mult, val = 1, 0
@@ -105,7 +105,7 @@ def client(sock, addr):
     log(f'gone {name}')
 
 if len(sys.argv) > 1 and sys.argv[1] == 'pub':
-    s = socket.create_connection(('127.0.0.1', 1883))
+    s = socket.create_connection((os.environ.get('BROKER', '127.0.0.1'), 1883))
     cid = b'pubtool'
     var = b'\x00\x04MQTT\x04\x02\x00\x3c' + struct.pack('>H', len(cid)) + cid
     s.sendall(bytes([0x10]) + enc_len(len(var)) + var); s.recv(4)

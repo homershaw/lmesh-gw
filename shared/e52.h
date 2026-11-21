@@ -34,4 +34,6 @@ esp_err_t e52_reset(void);
 /* Re-send settings the module forgets on reset (HEAD/BACK/CSMA_RNG). */
 void e52_runtime_setup(void);
 void e52_get_stats(e52_stats_t *s);
+/* module's SRC_ADDR, CHANNEL and PANID match g_cfg (detects a swapped/unprogrammed module) */
+bool e52_matches_cfg(void);
 uint32_t e52_airtime_ms(size_t len);
