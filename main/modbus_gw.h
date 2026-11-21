@@ -17,4 +17,4 @@ void modbus_gw_resolve(uint8_t unit, uint16_t *node, uint8_t *dst_unit);
  * Returns response PDU length (>0) or MB_ERR_*. Thread-safe. */
 int  modbus_gw_txn(uint16_t node, uint8_t dst_unit, const uint8_t *pdu, size_t plen,
                    uint8_t *rsp, size_t rmax, int timeout_ms);
-void modbus_gw_stats(uint32_t *reqs, uint32_t *timeouts, uint32_t *clients);
+void modbus_gw_stats(uint32_t *reqs, uint32_t *timeouts, uint32_t *clients, uint32_t *retries);

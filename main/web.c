@@ -11,8 +11,10 @@
 #include "esp_timer.h"
 #include "esp_system.h"
 #include "cJSON.h"
+#include "lwip/sockets.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+#include "freertos/queue.h"
 
 static const char *TAG = "web";
 extern const char index_html_start[] asm("_binary_index_html_start");
@@ -54,6 +56,49 @@ static int jint(cJSON *o, const char *k, int def)
     return def;
 }
 
+/* ---------------- login (HTTP Basic, user "admin") ---------------- */
+
+static void b64(const char *in, char *out)
+{
+    static const char T[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t n = strlen(in), i = 0;
+    for (; i + 2 < n; i += 3) {
+        uint32_t v = (uint8_t)in[i] << 16 | (uint8_t)in[i + 1] << 8 | (uint8_t)in[i + 2];
+        *out++ = T[v >> 18]; *out++ = T[(v >> 12) & 63]; *out++ = T[(v >> 6) & 63]; *out++ = T[v & 63];
+    }
+    if (i < n) {
+        uint32_t v = (uint8_t)in[i] << 16 | (i + 1 < n ? (uint8_t)in[i + 1] << 8 : 0);
+        *out++ = T[v >> 18]; *out++ = T[(v >> 12) & 63];
+        *out++ = i + 1 < n ? T[(v >> 6) & 63] : '=';
+        *out++ = '=';
+    }
+    *out = 0;
+}
+
+/* true if allowed; otherwise a 401 has been sent */
+static bool auth_ok(httpd_req_t *r)
+{
+    const char *pw = g_cfg.web_pass[0] ? g_cfg.web_pass : g_cfg.ap_pass;
+    if (!pw[0]) return true;                      /* open AP and no web password */
+    char cred[80], want[120], got[128];
+    snprintf(cred, sizeof cred, "admin:%s", pw);
+    strcpy(want, "Basic ");
+    b64(cred, want + 6);
+    bool ok = httpd_req_get_hdr_value_str(r, "Authorization", got, sizeof got) == ESP_OK;
+    if (ok) {                                     /* length + constant-time compare */
+        size_t lw = strlen(want), lg = strlen(got);
+        uint8_t d = lw != lg;
+        for (size_t i = 0; i < lw && i < lg; i++) d |= want[i] ^ got[i];
+        ok = d == 0;
+    }
+    if (!ok) {
+        httpd_resp_set_status(r, "401 Unauthorized");
+        httpd_resp_set_hdr(r, "WWW-Authenticate", "Basic realm=\"LMESH gateway\"");
+        httpd_resp_sendstr(r, "login required");
+    }
+    return ok;
+}
+
 /* ---------------- handlers ---------------- */
 
 static esp_err_t h_index(httpd_req_t *r)
@@ -68,7 +113,7 @@ static esp_err_t h_status(httpd_req_t *r)
     char sta[20], ap[20]; int rssi;
     wifi_status(sta, sizeof sta, ap, sizeof ap, &rssi);
     e52_stats_t st; e52_get_stats(&st);
-    uint32_t mr, mt, mc; modbus_gw_stats(&mr, &mt, &mc);
+    uint32_t mr, mt, mc, mrt; modbus_gw_stats(&mr, &mt, &mc, &mrt);
     uint32_t up, dn; mqtt_gw_stats(&up, &dn);
     char ip[20]; lmesh_ip_str(g_cfg.e52_addr, ip, sizeof ip);
     cJSON_AddStringToObject(o, "fw", GW_FW_VERSION);
@@ -93,6 +138,7 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddNumberToObject(o, "mb_reqs", mr);
     cJSON_AddNumberToObject(o, "mb_timeouts", mt);
     cJSON_AddNumberToObject(o, "mb_clients", mc);
+    cJSON_AddNumberToObject(o, "mb_retries", mrt);
     return send_json(r, o);
 }
 
@@ -123,11 +169,13 @@ static esp_err_t h_cfg_post(httpd_req_t *r)
 
 static esp_err_t h_e52_apply(httpd_req_t *r)
 {
-    static char log[1024];
-    esp_err_t e = e52_apply_config(log, sizeof log);
+    char *log = calloc(1, 1024);
+    if (!log) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    esp_err_t e = e52_apply_config(log, 1024);
     cJSON *o = cJSON_CreateObject();
     cJSON_AddBoolToObject(o, "ok", e == ESP_OK);
     cJSON_AddStringToObject(o, "log", log);
+    free(log);
     return send_json(r, o);
 }
 
@@ -139,6 +187,10 @@ static esp_err_t h_e52_at(httpd_req_t *r)
     if (cJSON_IsString(c) && strncmp(c->valuestring, "AT+", 3) == 0 && strlen(c->valuestring) < 64) {
         char resp[512];
         esp_err_t e = e52_at(c->valuestring, resp, sizeof resp, 1500);
+        if (strncmp(c->valuestring, "AT+RESET", 8) == 0 || strncmp(c->valuestring, "AT+DEFAULT", 10) == 0) {
+            vTaskDelay(pdMS_TO_TICKS(1500));   /* module reboot */
+            e52_runtime_setup();               /* else CSMA/HEAD revert until next gateway boot */
+        }
         cJSON_AddBoolToObject(o, "ok", e == ESP_OK);
         cJSON_AddStringToObject(o, "resp", e == ESP_ERR_TIMEOUT ? "(timeout)" : resp);
     } else {
@@ -165,6 +217,8 @@ static esp_err_t h_nodes(httpd_req_t *r)
         cJSON_AddStringToObject(e, "ip", ip);
         cJSON_AddStringToObject(e, "type", n[i].addr & 0x8000 ? "terminal" : "router");
         cJSON_AddStringToObject(e, "name", n[i].name);
+        cJSON_AddStringToObject(e, "site", n[i].site);
+        cJSON_AddBoolToObject(e, "site_dup", n[i].site_dup);
         cJSON_AddStringToObject(e, "kind", n[i].kind);
         cJSON_AddStringToObject(e, "fw", n[i].fw);
         cJSON_AddNumberToObject(e, "age", now - n[i].last_seen_s);
@@ -184,6 +238,28 @@ static esp_err_t h_ping(httpd_req_t *r)
     if (node < 0 || node > 0xFFFE) { cJSON_AddStringToObject(o, "err", "bad node"); return send_json(r, o); }
     int32_t rtt = lmesh_ping(node, 8000);
     cJSON_AddNumberToObject(o, "rtt", rtt);
+    return send_json(r, o);
+}
+
+/* set a field node's site id / name over the mesh (node answers on config/ack + re-ANNOUNCE) */
+static esp_err_t h_node_cfg(httpd_req_t *r)
+{
+    cJSON *in = read_json(r);
+    cJSON *o = cJSON_CreateObject();
+    int node = in ? jint(in, "node", -1) : -1;
+    if (node < 1 || node > 0x7FFF) { cJSON_Delete(in); cJSON_AddStringToObject(o, "err", "bad node"); return send_json(r, o); }
+    cJSON *p = cJSON_CreateObject();
+    cJSON *s = cJSON_GetObjectItem(in, "site"), *n = cJSON_GetObjectItem(in, "name");
+    if (cJSON_IsString(s)) cJSON_AddStringToObject(p, "site", s->valuestring);
+    if (cJSON_IsString(n)) cJSON_AddStringToObject(p, "name", n->valuestring);
+    char *js = cJSON_PrintUnformatted(p);
+    cJSON_Delete(p);
+    cJSON_Delete(in);
+    uint8_t buf[200];
+    int l = js ? snprintf((char *)buf, sizeof buf, "config%c%s", 0, js) : -1;
+    free(js);
+    bool ok = l > 0 && l < (int)sizeof buf && gw_downlink(node, buf, l);
+    cJSON_AddBoolToObject(o, "ok", ok);
     return send_json(r, o);
 }
 
@@ -274,26 +350,74 @@ static esp_err_t h_reboot(httpd_req_t *r)
     return ESP_OK;
 }
 
+/* ---- slow handlers (radio round trips, up to ~10 s) run on worker tasks so
+ * the single httpd task keeps serving status/UI requests meanwhile ---- */
+#define WEB_WORKERS 2
+static QueueHandle_t s_async_q;
+
+static void async_worker(void *arg)
+{
+    for (;;) {
+        httpd_req_t *r;
+        xQueueReceive(s_async_q, &r, portMAX_DELAY);
+        ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
+        httpd_req_async_handler_complete(r);
+    }
+}
+
+static esp_err_t h_sync(httpd_req_t *r)
+{
+    if (!auth_ok(r)) return ESP_OK;
+    return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
+}
+
+static esp_err_t h_async(httpd_req_t *r)
+{
+    if (!auth_ok(r)) return ESP_OK;
+    httpd_req_t *copy;
+    if (httpd_req_async_handler_begin(r, &copy) != ESP_OK)
+        return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    if (xQueueSend(s_async_q, &copy, 0) != pdTRUE) {
+        httpd_req_async_handler_complete(copy);
+        httpd_resp_set_status(r, "503 Busy");
+        return httpd_resp_sendstr(r, "{\"err\":\"busy, try again\"}");
+    }
+    return ESP_OK;
+}
+
+/* Responses go out as header + body segments; without NODELAY the body waits
+ * for the client's ACK (Nagle) and a slow/lost ACK costs a ~1.5 s RTO. */
+static esp_err_t on_open(httpd_handle_t hd, int fd)
+{
+    int one = 1;
+    setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof one);
+    return ESP_OK;
+}
+
 void web_start(void)
 {
     httpd_config_t c = HTTPD_DEFAULT_CONFIG();
     c.stack_size = 10240;
-    c.max_uri_handlers = 16;
+    c.max_uri_handlers = 20;
     c.lru_purge_enable = true;
+    c.open_fn = on_open;
+    s_async_q = xQueueCreate(4, sizeof(httpd_req_t *));
+    for (int i = 0; i < WEB_WORKERS; i++) xTaskCreate(async_worker, "web_async", 8192, NULL, 5, NULL);
     httpd_handle_t s;
     if (httpd_start(&s, &c) != ESP_OK) { ESP_LOGE(TAG, "httpd start failed"); return; }
     const httpd_uri_t u[] = {
-        { .uri = "/", .method = HTTP_GET, .handler = h_index },
-        { .uri = "/api/status", .method = HTTP_GET, .handler = h_status },
-        { .uri = "/api/config", .method = HTTP_GET, .handler = h_cfg_get },
-        { .uri = "/api/config", .method = HTTP_POST, .handler = h_cfg_post },
-        { .uri = "/api/e52/apply", .method = HTTP_POST, .handler = h_e52_apply },
-        { .uri = "/api/e52/at", .method = HTTP_POST, .handler = h_e52_at },
-        { .uri = "/api/nodes", .method = HTTP_GET, .handler = h_nodes },
-        { .uri = "/api/ping", .method = HTTP_POST, .handler = h_ping },
-        { .uri = "/api/discover", .method = HTTP_POST, .handler = h_discover },
-        { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_modbus },
-        { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_reboot },
+        { .uri = "/", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_index },
+        { .uri = "/api/status", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_status },
+        { .uri = "/api/config", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_cfg_get },
+        { .uri = "/api/config", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_cfg_post },
+        { .uri = "/api/e52/apply", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_apply },
+        { .uri = "/api/e52/at", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_at },
+        { .uri = "/api/nodes", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_nodes },
+        { .uri = "/api/ping", .method = HTTP_POST, .handler = h_async, .user_ctx = h_ping },
+        { .uri = "/api/node/config", .method = HTTP_POST, .handler = h_async, .user_ctx = h_node_cfg },
+        { .uri = "/api/discover", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_discover },
+        { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_async, .user_ctx = h_modbus },
+        { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);
     ESP_LOGI(TAG, "web UI on port 80");

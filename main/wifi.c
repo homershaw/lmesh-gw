@@ -80,7 +80,7 @@ void wifi_start(void)
     ap.ap.ssid_len = strlen((char *)ap.ap.ssid);
     strncpy((char *)ap.ap.password, g_cfg.ap_pass, sizeof ap.ap.password);
     ap.ap.channel = 1;
-    ap.ap.max_connection = 4;
+    ap.ap.max_connection = 8;          /* = CONFIG_LWIP_DHCPS_MAX_STATION_NUM */
     ap.ap.authmode = strlen(g_cfg.ap_pass) >= 8 ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
 
     wifi_config_t sta = { 0 };
@@ -88,9 +88,13 @@ void wifi_start(void)
     strncpy((char *)sta.sta.password, g_cfg.sta_pass, sizeof sta.sta.password);
     sta.sta.threshold.authmode = g_cfg.sta_pass[0] ? WIFI_AUTH_WPA2_PSK : WIFI_AUTH_OPEN;
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    /* No uplink configured: plain AP. An idle STA interface still costs
+     * radio time and can pull the AP off-channel. */
+    bool use_sta = g_cfg.sta_ssid[0] != 0;
+    ESP_ERROR_CHECK(esp_wifi_set_mode(use_sta ? WIFI_MODE_APSTA : WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta));
+    if (use_sta) ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta));
     ESP_ERROR_CHECK(esp_wifi_start());
+    esp_wifi_set_ps(WIFI_PS_NONE);       /* mains-powered gateway: no modem sleep, lower AP latency */
     ESP_LOGI(TAG, "AP '%s' up at 192.168.4.1, STA ssid '%s'", ap.ap.ssid, g_cfg.sta_ssid);
 }

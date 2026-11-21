@@ -24,11 +24,11 @@ void cfg_defaults(gw_cfg_t *c)
     c->mqtt_en = false;
     strcpy(c->mqtt_uri, "mqtt://192.168.1.10:1883");
     c->e52_channel = 65;            /* 915.125 MHz, mid-band */
-    c->e52_rate = 2;                /* 7 kbps, longest range */
+    c->e52_rate = 1;                /* 21.875 kbps: ~3.5x faster than 7k, moderate range */
     c->e52_power = 22;
     c->e52_panid = 0x1234;
     c->e52_addr = 0x0001;
-    c->e52_csma = 127;
+    c->e52_csma = 40;               /* ms; 127 -> 40 cut 1-hop RTT median 371 -> 224 ms */
     c->uart_tx = CONFIG_LMGW_E52_TX_GPIO;
     c->uart_rx = CONFIG_LMGW_E52_RX_GPIO;
     c->uart_rst = CONFIG_LMGW_E52_RST_GPIO;
@@ -71,6 +71,7 @@ bool cfg_from_json(const char *json)
     jstr(o, "ap_ssid", c->ap_ssid, sizeof c->ap_ssid, false);
     jstr(o, "ap_pass", c->ap_pass, sizeof c->ap_pass, true);
     jstr(o, "hostname", c->hostname, sizeof c->hostname, false);
+    jstr(o, "web_pass", c->web_pass, sizeof c->web_pass, true);
 
     cJSON *b = cJSON_GetObjectItem(o, "mqtt_en");
     if (cJSON_IsBool(b)) c->mqtt_en = cJSON_IsTrue(b);
@@ -121,6 +122,7 @@ char *cfg_to_json(bool secrets)
     cJSON_AddStringToObject(o, "ap_ssid", c->ap_ssid);
     cJSON_AddStringToObject(o, "ap_pass", secrets ? c->ap_pass : MASK);
     cJSON_AddStringToObject(o, "hostname", c->hostname);
+    cJSON_AddStringToObject(o, "web_pass", secrets ? c->web_pass : (c->web_pass[0] ? MASK : ""));
     cJSON_AddBoolToObject(o, "mqtt_en", c->mqtt_en);
     cJSON_AddStringToObject(o, "mqtt_uri", c->mqtt_uri);
     cJSON_AddStringToObject(o, "mqtt_user", c->mqtt_user);

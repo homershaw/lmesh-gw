@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -43,8 +44,9 @@ static void on_mesh_1883(const lmesh_dgram_t *d)
     const uint8_t *z = memchr(d->data, 0, d->len);
     if (!z || z == d->data) return;
     size_t tl = z - d->data;
-    char topic[160];
-    int n = snprintf(topic, sizeof topic, "%s/%04X/", s_base, d->src);
+    char topic[160], lvl[40];
+    lmesh_node_topic(d->src, lvl, sizeof lvl);
+    int n = snprintf(topic, sizeof topic, "%s/%s/", s_base, lvl);
     if (n + tl >= sizeof topic) return;
     memcpy(topic + n, d->data, tl);
     topic[n + tl] = 0;
@@ -54,30 +56,59 @@ static void on_mesh_1883(const lmesh_dgram_t *d)
     s_up++;
 }
 
+/* Downlinks are acknowledged by the node (empty UDP back to port 1884, same
+ * seq) and resent with the same seq until acked, so a lost radio frame does
+ * not silently drop a config change or a write. Nodes ignore repeats. */
+static SemaphoreHandle_t s_dn_lock, s_dn_ack;
+static volatile uint16_t s_dn_node;
+static volatile int s_dn_seq = -1;
+static uint32_t s_down_fail;
+
+static void on_dn_ack(const lmesh_dgram_t *d)
+{
+    if (d->src == s_dn_node && d->seq == s_dn_seq) xSemaphoreGive(s_dn_ack);
+}
+
+bool gw_downlink(uint16_t node, const uint8_t *data, size_t len)
+{
+    static const uint32_t base[] = { 900, 1200, 3500 };
+    uint32_t wait = base[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate] + 2 * e52_airtime_ms(len > 200 ? 200 : len) * ((len + 192) / 193);
+    xSemaphoreTake(s_dn_lock, portMAX_DELAY);
+    uint8_t seq = lmesh_next_seq();
+    s_dn_node = node;
+    s_dn_seq = seq;
+    xSemaphoreTake(s_dn_ack, 0);
+    bool ok = false;
+    for (int attempt = 0; attempt < 3 && !ok; attempt++) {
+        if (attempt) ESP_LOGW(TAG, "downlink to 0x%04X seq %u: no ack, retry %d", node, seq, attempt);
+        if (lmesh_send_udp(node, seq, LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, data, len) != ESP_OK) continue;
+        ok = xSemaphoreTake(s_dn_ack, pdMS_TO_TICKS(wait)) == pdTRUE;
+    }
+    s_dn_seq = -1;
+    xSemaphoreGive(s_dn_lock);
+    if (ok) s_down++; else { s_down_fail++; ESP_LOGW(TAG, "downlink to 0x%04X not acknowledged", node); }
+    return ok;
+}
+
 static void dn_task(void *a)
 {
     static dn_msg_t m;
-    for (;;) {
-        if (xQueueReceive(s_dnq, &m, portMAX_DELAY) == pdTRUE) {
-            esp_err_t e = lmesh_send_udp(m.node, lmesh_next_seq(), LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, m.data, m.len);
-            if (e != ESP_OK) ESP_LOGW(TAG, "downlink to 0x%04X failed", m.node);
-            else s_down++;
-        }
-    }
+    for (;;)
+        if (xQueueReceive(s_dnq, &m, portMAX_DELAY) == pdTRUE) gw_downlink(m.node, m.data, m.len);
 }
 
 /* broker -> node */
 static void handle_downlink(const char *topic, int tl, const char *data, int dl)
 {
     size_t bl = strlen(s_base);
-    /* <base>/<NODE>/set/<sub> */
-    if (tl < (int)bl + 10 || strncmp(topic, s_base, bl) != 0 || topic[bl] != '/') return;
-    const char *p = topic + bl + 1;
-    char hex[5] = { 0 };
-    memcpy(hex, p, 4);
-    if (strncmp(p + 4, "/set/", 5) != 0) return;
-    uint16_t node = (uint16_t)strtol(hex, NULL, 16);
-    const char *sub = p + 9;
+    /* <base>/<SITE or NODE>/set/<sub> */
+    if (tl < (int)bl + 7 || strncmp(topic, s_base, bl) != 0 || topic[bl] != '/') return;
+    const char *p = topic + bl + 1, *end = topic + tl;
+    const char *sl_ = memchr(p, '/', end - p);
+    if (!sl_ || end - sl_ < 6 || strncmp(sl_, "/set/", 5) != 0) return;
+    uint16_t node;
+    if (!lmesh_topic_to_addr(p, sl_ - p, &node)) { ESP_LOGW(TAG, "downlink: unknown site '%.*s'", (int)(sl_ - p), p); return; }
+    const char *sub = sl_ + 5;
     int sl = tl - (sub - topic);
     if (sl <= 0) return;
     static dn_msg_t m;           /* only used from MQTT task */
@@ -134,9 +165,9 @@ static void stats_task(void *a)
         int n = lmesh_nodes(nodes, LMESH_MAX_NODES);
         uint32_t now = esp_timer_get_time() / 1000000LL;
         size_t o = snprintf(buf, sizeof buf, "[");
-        for (int i = 0; i < n && o < sizeof buf - 160; i++)
-            o += snprintf(buf + o, sizeof buf - o, "%s{\"addr\":\"%04X\",\"name\":\"%s\",\"kind\":\"%s\",\"age\":%lu,\"rtt\":%ld}",
-                          i ? "," : "", nodes[i].addr, nodes[i].name, nodes[i].kind,
+        for (int i = 0; i < n && o < sizeof buf - 200; i++)
+            o += snprintf(buf + o, sizeof buf - o, "%s{\"addr\":\"%04X\",\"site\":\"%s\",\"name\":\"%s\",\"kind\":\"%s\",\"age\":%lu,\"rtt\":%ld}",
+                          i ? "," : "", nodes[i].addr, nodes[i].site, nodes[i].name, nodes[i].kind,
                           (unsigned long)(now - nodes[i].last_seen_s), (long)nodes[i].rtt_ms);
         snprintf(buf + o, sizeof buf - o, "]");
         snprintf(t, sizeof t, "%s/gw/nodes", s_base);
@@ -155,6 +186,9 @@ void mqtt_gw_start(void)
     else snprintf(s_base, sizeof s_base, "lmesh/%s", g_gw_id);
 
     lmesh_bind(LMESH_PORT_MQTT_UP, on_mesh_1883);
+    s_dn_lock = xSemaphoreCreateMutex();
+    s_dn_ack = xSemaphoreCreateBinary();
+    lmesh_bind(LMESH_PORT_MQTT_DN, on_dn_ack);
     if (!g_cfg.mqtt_en || !g_cfg.mqtt_uri[0]) { ESP_LOGI(TAG, "MQTT disabled"); return; }
 
     s_dnq = xQueueCreate(4, sizeof(dn_msg_t));
@@ -173,5 +207,6 @@ void mqtt_gw_start(void)
     s_cli = esp_mqtt_client_init(&mc);
     esp_mqtt_client_register_event(s_cli, ESP_EVENT_ANY_ID, on_mqtt, NULL);
     xTaskCreate(stats_task, "mqtt_st", 4096, NULL, 3, NULL);
-    if (wifi_sta_connected()) mqtt_gw_on_network(true);
+    /* AP-only gateway: the broker can be on the AP side (laptop/Pi on site) */
+    if (wifi_sta_connected() || !g_cfg.sta_ssid[0]) mqtt_gw_on_network(true);
 }

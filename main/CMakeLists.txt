@@ -4,8 +4,8 @@ if(IDF_VERSION_MAJOR LESS 6)
     list(APPEND reqs mqtt json)
 endif()
 idf_component_register(
-    SRCS "main.c" "config.c" "e52.c" "lmesh.c" "modbus_gw.c"
+    SRCS "main.c" "config.c" "../shared/e52.c" "../shared/lmesh.c" "modbus_gw.c"
          "mqtt_gw.c" "wifi.c" "web.c" "udp_bridge.c"
-    INCLUDE_DIRS "."
+    INCLUDE_DIRS "." "../shared"
     EMBED_TXTFILES "web/index.html"
     PRIV_REQUIRES ${reqs})

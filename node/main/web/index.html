@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LMESH Node</title>
+<style>
+:root{--bg:#0f1419;--pn:#182029;--ln:#2a3542;--tx:#d8dee6;--mu:#8a96a3;--ac:#3fa9f5;--ok:#3ecf8e;--bad:#ef5b5b}
+*{box-sizing:border-box}body{margin:0;font:14px system-ui,sans-serif;background:var(--bg);color:var(--tx)}
+header{display:flex;align-items:center;gap:16px;padding:10px 16px;background:var(--pn);border-bottom:1px solid var(--ln);flex-wrap:wrap}
+header b{font-size:16px}header span{color:var(--mu)}
+nav{display:flex;gap:4px;padding:8px 16px;flex-wrap:wrap}
+nav button{background:none;border:1px solid var(--ln);color:var(--tx);padding:6px 12px;border-radius:6px;cursor:pointer}
+nav button.on{background:var(--ac);border-color:var(--ac);color:#fff}
+main{padding:0 16px 24px;max-width:1100px}section{display:none}section.on{display:block}
+.card{background:var(--pn);border:1px solid var(--ln);border-radius:8px;padding:14px;margin:10px 0;overflow-x:auto}
+h3{margin:0 0 10px;font-size:14px;color:var(--mu);text-transform:uppercase;letter-spacing:.05em}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.kv{background:var(--bg);border-radius:6px;padding:8px 10px}.kv i{display:block;color:var(--mu);font-style:normal;font-size:12px}
+.big{font-size:22px;font-variant-numeric:tabular-nums}
+label{display:block;margin:6px 0 2px;color:var(--mu);font-size:12px}
+input,select{width:100%;padding:7px;background:var(--bg);border:1px solid var(--ln);color:var(--tx);border-radius:5px;font:inherit}
+.row{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.btn{background:var(--ac);border:0;color:#fff;padding:8px 14px;border-radius:6px;cursor:pointer;margin:10px 6px 0 0}
+.btn.sec{background:var(--ln)}.btn.warn{background:#c77a1a}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:5px;border-bottom:1px solid var(--ln)}th{color:var(--mu);font-weight:500;font-size:12px}
+td input,td select{padding:5px;min-width:60px}
+pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max-height:300px;overflow:auto;margin:10px 0 0}
+.ok{color:var(--ok)}.bad{color:var(--bad)}.mu{color:var(--mu);font-size:12px}
+</style></head><body>
+<header><b id="hsite">LMESH Node</b><span id="hid"></span><span id="hst"></span></header>
+<nav id="nav"></nav>
+<main>
+<section id="t-site">
+ <div class="card"><h3>Live values</h3><div class="grid" id="vals"></div>
+  <button class="btn" onclick="pollNow()">Poll now</button><span class="mu" id="pollmsg"></span></div>
+ <div class="card"><h3>Node</h3><div class="grid" id="st"></div>
+  <button class="btn sec" onclick="pingGw(this)">Ping gateway</button></div>
+</section>
+
+<section id="t-poll">
+ <div class="card"><h3>Poll list — published as one JSON message to &lt;base&gt;/&lt;site&gt;/data</h3>
+  <div class="row" style="max-width:340px"><div><label>Poll / publish every (s, 0 = off)</label><input id="poll_s" type="number"></div></div>
+  <table><thead><tr><th>Name (JSON key)</th><th>Unit</th><th>Function</th><th>Address (0-based)</th><th>Type</th><th>Scale</th><th>Offset</th><th></th></tr></thead><tbody id="pt"></tbody></table>
+  <button class="btn sec" onclick="addPoll()">+ Add point</button><button class="btn" onclick="savePoll()">Save poll list</button>
+  <p class="mu">value = raw × scale + offset. 32-bit types read 2 registers; “sw” = low word first. Coils/discrete inputs (FC1/2) publish 0/1.
+  Writes from MQTT: publish <code>{"name":"…","value":…}</code> to &lt;base&gt;/&lt;site&gt;/set/write.</p>
+ </div>
+</section>
+
+<section id="t-rtu">
+ <div class="card"><h3>RS-485 test (direct to RTU)</h3>
+  <div class="row">
+   <div><label>Unit ID</label><input id="m_unit" value="1"></div>
+   <div><label>Function</label><select id="m_fc">
+    <option value="3">03 Read Holding</option><option value="4">04 Read Input</option>
+    <option value="1">01 Read Coils</option><option value="2">02 Read Discrete</option>
+    <option value="6">06 Write Single Reg</option><option value="16">16 Write Multiple Regs</option>
+    <option value="5">05 Write Single Coil</option></select></div>
+   <div><label>Start address (0-based)</label><input id="m_addr" value="0"></div>
+   <div><label>Count</label><input id="m_cnt" value="10"></div>
+   <div><label>Write values (comma sep)</label><input id="m_vals" placeholder="100,200"></div>
+  </div>
+  <button class="btn" onclick="rtu()">Send</button>
+  <pre id="m_out">—</pre>
+ </div>
+</section>
+
+<section id="t-radio">
+ <div class="card"><h3>E52 mesh radio (must match the gateway)</h3>
+  <div class="row">
+   <div><label>Channel</label><select id="e52_channel"></select></div>
+   <div><label>Air rate</label><select id="e52_rate"><option value="0">0 – 62.5 kbps</option><option value="1">1 – 21.875 kbps</option><option value="2">2 – 7 kbps</option></select></div>
+   <div><label>Power (dBm, -9..22)</label><input id="e52_power" type="number"></div>
+   <div><label>PAN ID</label><input id="e52_panid"></div>
+   <div><label>This node address (0x0002–0x7FFF)</label><input id="e52_addr"></div>
+   <div><label>CSMA backoff (ms)</label><input id="e52_csma" type="number"></div>
+   <div><label>Gateway address</label><input id="gw_addr"></div>
+  </div>
+  <button class="btn" onclick="apply()">Save &amp; apply to E52</button>
+  <pre id="e_out" style="display:none"></pre>
+ </div>
+ <div class="card"><h3>AT console</h3>
+  <div class="row"><div style="grid-column:1/-1"><input id="at" placeholder="AT+INFO=?" onkeydown="if(event.key=='Enter')at()"></div></div>
+  <span class="mu">Quick: <a href="#" onclick="return atq('AT+INFO=?')">INFO</a> · <a href="#" onclick="return atq('AT+ROUTER_READ=?')">ROUTES</a> · <a href="#" onclick="return atq('AT+CSMA_RNG=?')">CSMA</a></span>
+  <pre id="at_out"></pre>
+ </div>
+</section>
+
+<section id="t-set">
+ <div class="card"><h3>Site</h3>
+  <div class="row">
+   <div><label>Site / location ID (e.g. LSD 01-02-034-05W5)</label><input id="site"></div>
+   <div><label>Name / description</label><input id="name"></div>
+  </div>
+  <button class="btn" onclick="save(siteKeys)">Save site</button>
+  <p class="mu">The site ID becomes the MQTT topic level: &lt;base&gt;/&lt;site&gt;/data. Avoid “/”, “+”, “#”.</p>
+ </div>
+ <div class="card"><h3>RS-485</h3>
+  <div class="row">
+   <div><label>Baud</label><select id="rs_baud"><option>1200</option><option>2400</option><option>4800</option><option>9600</option><option>19200</option><option>38400</option><option>57600</option><option>115200</option></select></div>
+   <div><label>Parity</label><select id="rs_parity"><option value="0">None</option><option value="1">Even</option><option value="2">Odd</option></select></div>
+   <div><label>Stop bits</label><select id="rs_stop"><option>1</option><option>2</option></select></div>
+   <div><label>Reply timeout (ms)</label><input id="rtu_timeout_ms" type="number"></div>
+  </div>
+  <button class="btn" onclick="save(rsKeys)">Save (reboot to apply)</button>
+ </div>
+ <div class="card"><h3>Wi-Fi access point &amp; login</h3>
+  <div class="row">
+   <div><label>AP SSID (blank = LMESH-NODE-xxxx)</label><input id="ap_ssid"></div>
+   <div><label>AP password (≥8)</label><input id="ap_pass" type="password"></div>
+   <div><label>Web password (user admin; blank = AP password)</label><input id="web_pass" type="password"></div>
+   <div><label>Wi-Fi antenna</label><select id="ext_ant"><option value="false">On-board</option><option value="true">External (U.FL)</option></select></div>
+  </div>
+  <button class="btn" onclick="save(netKeys)">Save (reboot to apply)</button>
+  <button class="btn warn" onclick="reboot()">Reboot</button>
+ </div>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const tabs=[['site','Site'],['poll','Poll list'],['rtu','RS-485 test'],['radio','Radio'],['set','Settings']];
+const radioKeys=['e52_channel','e52_rate','e52_power','e52_panid','e52_addr','e52_csma','gw_addr'];
+const siteKeys=['site','name'],rsKeys=['rs_baud','rs_parity','rs_stop','rtu_timeout_ms'],netKeys=['ap_ssid','ap_pass','web_pass','ext_ant'];
+const TYPES=['u16','s16','u32','s32','f32','u32sw','s32sw','f32sw','bit'];
+let cfg={},cur='site';
+const api=(u,b)=>fetch(u,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
+function show(t){cur=t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+t));
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t))}
+tabs.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.t=k;b.onclick=()=>show(k);$('nav').appendChild(b)});
+for(let c=52;c<=77;c++){const o=document.createElement('option');o.value=c;o.textContent=c+' – '+(850.125+c).toFixed(3)+' MHz';$('e52_channel').appendChild(o)}
+const hex=n=>'0x'+Number(n).toString(16).toUpperCase().padStart(4,'0');
+const age=s=>s<0?'never':s<60?s+' s ago':s<3600?Math.floor(s/60)+' m ago':Math.floor(s/3600)+' h ago';
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function status(){api('/api/status').then(s=>{
+ $('hsite').textContent=s.site||'(no site ID set)';
+ $('hid').textContent=(s.name?s.name+' · ':'')+'mesh '+s.addr+' · fw '+s.fw;
+ $('hst').innerHTML=s.gw_seen>=0&&s.gw_seen<900?'<span class=ok>gateway '+s.gw+'</span>':'<span class=bad>gateway '+s.gw+' not heard</span>';
+ const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),'Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
+ 'RTU ok / exceptions':s.rtu_ok+' / '+s.rtu_exc,'RTU timeouts / bad':s.rtu_timeout+' / '+s.rtu_crc,'Mesh Modbus reqs (dups)':s.mb_reqs+' ('+s.mb_dups+')',
+ 'Radio':s.freq+' MHz, rate '+s.rate,'LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'Free heap':s.heap};
+ $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
+function values(){api('/api/values').then(a=>{$('vals').innerHTML=a.map(v=>`<div class=kv><i>${esc(v.name)}</i><span class="big ${v.v===null?'bad':''}">${v.age===undefined?'—':v.v===null?'error':v.v}</span>${v.age!==undefined?'<i>'+age(v.age)+'</i>':''}</div>`).join('')||'<span class=mu>No poll points yet — add them on the Poll list tab.</span>'})}
+function pollNow(){api('/api/poll',{}).then(()=>{$('pollmsg').textContent=' polling…';setTimeout(()=>{values();status();$('pollmsg').textContent=''},2500)})}
+function pingGw(b){b.textContent='…';api('/api/ping',{}).then(r=>b.textContent=r.rtt<0?'no reply':'gateway '+r.rtt+' ms')}
+function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...siteKeys,...rsKeys,...netKeys,'poll_s'])if($(k))$(k).value=String(c[k]);
+ $('e52_panid').value=hex(c.e52_panid);$('e52_addr').value=hex(c.e52_addr);$('gw_addr').value=hex(c.gw_addr);renderPoll()})}
+function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='ext_ant')v=v=='true';else if($(k).type=='number'||$(k).tagName=='SELECT'&&!isNaN(v))v=Number(v);o[k]=v});return o}
+function save(keys){return api('/api/config',collect(keys)).then(r=>{alert(r.ok?r.note:'Save failed');loadCfg();status()})}
+function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving and programming E52…';
+ api('/api/config',collect(radioKeys)).then(()=>api('/api/e52/apply',{})).then(r=>{$('e_out').textContent=(r.ok?'OK\n':'Some commands failed\n')+r.log;loadCfg()})}
+function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
+ api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
+function atq(c){$('at').value=c;at();return false}
+function reboot(){if(confirm('Reboot node?'))api('/api/reboot',{})}
+function rtu(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
+ const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};
+ $('m_out').textContent='Waiting for RTU…';
+ api('/api/rtu',b).then(r=>{let t=`${r.ms} ms\n`;if(r.err)t+='ERROR: '+r.err;else{t+='raw: '+r.raw+'\n';
+  if(r.values&&r.values.length)t+=r.values.map((v,i)=>(b.addr+i)+': '+v).join('\n');else t+='write OK'}$('m_out').textContent=t})}
+function renderPoll(){$('pt').innerHTML='';(cfg.poll||[]).forEach(p=>addPoll(p))}
+function addPoll(p={name:'',unit:1,fc:3,addr:0,type:'u16',scale:1,offset:0}){const tr=document.createElement('tr');
+ tr.innerHTML=`<td><input value="${esc(p.name)}" placeholder="tank_level"></td><td><input value="${p.unit}" style="width:60px"></td>
+ <td><select>${[3,4,1,2].map(f=>`<option value=${f} ${f==p.fc?'selected':''}>${{3:'03 Holding',4:'04 Input',1:'01 Coil',2:'02 Discrete'}[f]}</option>`).join('')}</select></td>
+ <td><input value="${p.addr}"></td><td><select>${TYPES.map(t=>`<option ${t==p.type?'selected':''}>${t}</option>`).join('')}</select></td>
+ <td><input value="${p.scale}"></td><td><input value="${p.offset}"></td><td><button class="btn sec" style="margin:0">✕</button></td>`;
+ tr.querySelector('button').onclick=()=>tr.remove();$('pt').appendChild(tr)}
+function savePoll(){const poll=[...$('pt').querySelectorAll('tr')].map(tr=>{const i=tr.querySelectorAll('input,select');
+  return{name:i[0].value.trim(),unit:Number(i[1].value),fc:Number(i[2].value),addr:Number(i[3].value),type:i[4].value,scale:Number(i[5].value)||1,offset:Number(i[6].value)||0}}).filter(p=>p.name);
+ api('/api/config',{poll,poll_s:Number($('poll_s').value)}).then(r=>{alert(r.ok?'Poll list saved (takes effect now)':'Save failed');loadCfg();values()})}
+show('site');status();values();loadCfg();setInterval(()=>{status();if(cur=='site')values()},5000);
+</script></body></html>
