@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
+#include "freertos/semphr.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 
@@ -55,16 +56,45 @@ static void on_mesh_1883(const lmesh_dgram_t *d)
     s_up++;
 }
 
+/* Downlinks are acknowledged by the node (empty UDP back to port 1884, same
+ * seq) and resent with the same seq until acked, so a lost radio frame does
+ * not silently drop a config change or a write. Nodes ignore repeats. */
+static SemaphoreHandle_t s_dn_lock, s_dn_ack;
+static volatile uint16_t s_dn_node;
+static volatile int s_dn_seq = -1;
+static uint32_t s_down_fail;
+
+static void on_dn_ack(const lmesh_dgram_t *d)
+{
+    if (d->src == s_dn_node && d->seq == s_dn_seq) xSemaphoreGive(s_dn_ack);
+}
+
+bool gw_downlink(uint16_t node, const uint8_t *data, size_t len)
+{
+    static const uint32_t base[] = { 900, 1200, 3500 };
+    uint32_t wait = base[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate] + 2 * e52_airtime_ms(len > 200 ? 200 : len) * ((len + 192) / 193);
+    xSemaphoreTake(s_dn_lock, portMAX_DELAY);
+    uint8_t seq = lmesh_next_seq();
+    s_dn_node = node;
+    s_dn_seq = seq;
+    xSemaphoreTake(s_dn_ack, 0);
+    bool ok = false;
+    for (int attempt = 0; attempt < 3 && !ok; attempt++) {
+        if (attempt) ESP_LOGW(TAG, "downlink to 0x%04X seq %u: no ack, retry %d", node, seq, attempt);
+        if (lmesh_send_udp(node, seq, LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, data, len) != ESP_OK) continue;
+        ok = xSemaphoreTake(s_dn_ack, pdMS_TO_TICKS(wait)) == pdTRUE;
+    }
+    s_dn_seq = -1;
+    xSemaphoreGive(s_dn_lock);
+    if (ok) s_down++; else { s_down_fail++; ESP_LOGW(TAG, "downlink to 0x%04X not acknowledged", node); }
+    return ok;
+}
+
 static void dn_task(void *a)
 {
     static dn_msg_t m;
-    for (;;) {
-        if (xQueueReceive(s_dnq, &m, portMAX_DELAY) == pdTRUE) {
-            esp_err_t e = lmesh_send_udp(m.node, lmesh_next_seq(), LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, m.data, m.len);
-            if (e != ESP_OK) ESP_LOGW(TAG, "downlink to 0x%04X failed", m.node);
-            else s_down++;
-        }
-    }
+    for (;;)
+        if (xQueueReceive(s_dnq, &m, portMAX_DELAY) == pdTRUE) gw_downlink(m.node, m.data, m.len);
 }
 
 /* broker -> node */
@@ -156,6 +186,9 @@ void mqtt_gw_start(void)
     else snprintf(s_base, sizeof s_base, "lmesh/%s", g_gw_id);
 
     lmesh_bind(LMESH_PORT_MQTT_UP, on_mesh_1883);
+    s_dn_lock = xSemaphoreCreateMutex();
+    s_dn_ack = xSemaphoreCreateBinary();
+    lmesh_bind(LMESH_PORT_MQTT_DN, on_dn_ack);
     if (!g_cfg.mqtt_en || !g_cfg.mqtt_uri[0]) { ESP_LOGI(TAG, "MQTT disabled"); return; }
 
     s_dnq = xQueueCreate(4, sizeof(dn_msg_t));

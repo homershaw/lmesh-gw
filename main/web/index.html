@@ -147,7 +147,7 @@ function status(){api('/api/status').then(s=>{
 function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.site?(n.site_dup?'⚠ duplicate: ':'')+n.site:''}${n.kind=='rtu'?` <a href="#" title="Set site ID" onclick="return setSite(${n.addr_dec},'${n.site||''}')">✎</a>`:''}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td>
  <td><button class="btn sec" style="margin:0" onclick="ping(${n.addr_dec},this)">Ping</button></td></tr>`).join('')||'<tr><td colspan=9 class=mu>No nodes heard yet</td></tr>'})}
 function setSite(a,cur){const s=prompt('Site / location ID for node '+hex(a)+' (e.g. LSD 01-02-034-05W5):',cur);if(s===null)return false;
- api('/api/node/config',{node:a,site:s.trim()}).then(r=>{alert(r.ok?'Sent over the mesh. The node saves it and re-announces; refresh in a few seconds.':'Send failed');setTimeout(nodes,3000)});return false}
+ api('/api/node/config',{node:a,site:s.trim()}).then(r=>{alert(r.ok?'Node acknowledged. It saves the site ID and re-announces; refresh in a few seconds.':'No acknowledgement from the node (3 tries). Is it in range?');setTimeout(nodes,3000)});return false}
 function ping(a,b){b.textContent='…';api('/api/ping',{node:a}).then(r=>{b.textContent=r.rtt<0?'no reply':r.rtt+' ms';setTimeout(nodes,500)})}
 function disc(){api('/api/discover',{}).then(()=>{$('discmsg').textContent='Listening 15 s for replies…';setTimeout(()=>{nodes();$('discmsg').textContent=''},15500)})}
 function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...uartKeys,...netKeys]){if($(k))$(k).value=String(c[k])}

@@ -320,7 +320,12 @@ esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len)
     }
     if (e == ESP_OK) {
         link_write(data, len);
-        s_tx_free_at_us = esp_timer_get_time() + (int64_t)e52_airtime_ms(len) * 1000;
+        /* The module takes one frame at a time and drops what arrives while it
+         * is still busy: CSMA backoff (up to e52_csma), airtime, then the
+         * receiver's MAC ack. Pacing by airtime alone lost the 2nd/3rd frame
+         * of back-to-back sends (ack + 2-fragment reply). */
+        s_tx_free_at_us = esp_timer_get_time() +
+            (int64_t)(e52_airtime_ms(len) + e52_airtime_ms(12) + g_cfg.e52_csma + 20) * 1000;
         s_st.tx_frames++;
         s_st.tx_bytes += len;
     } else {

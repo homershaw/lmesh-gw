@@ -304,7 +304,7 @@ static void do_config(const char *json)
     xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
     snprintf(b, sizeof b, "{\"ok\":%s,\"site\":\"%s\"}", ok ? "true" : "false", g_cfg.site);
     xSemaphoreGive(g_cfg_lock);
-    if (ok) { set_identity(); lmesh_announce(s_gw); }   /* gateway switches topic right away */
+    if (ok) { set_identity(); lmesh_announce(s_gw); node_poll_now(); }   /* new topic + schedule now */
     publish("config/ack", b);
 }
 
@@ -357,7 +357,12 @@ static void on_modbus(const lmesh_dgram_t *d)
 
 static void on_downlink(const lmesh_dgram_t *d)
 {
+    static uint16_t last_src; static int last_seq = -1; static int64_t last_us;
     if (d->len > sizeof ((work_t *)0)->data) return;
+    lmesh_send_udp(d->src, d->seq, LMESH_PORT_MQTT_DN, d->sport, (const uint8_t *)"", 0);   /* ack */
+    int64_t now = esp_timer_get_time();
+    if (d->src == last_src && d->seq == last_seq && now - last_us < 60000000LL) return;   /* gateway resend */
+    last_src = d->src; last_seq = d->seq; last_us = now;
     static work_t w;
     w.kind = 1; w.src = d->src; w.seq = d->seq; w.sport = d->sport; w.len = d->len;
     memcpy(w.data, d->data, d->len);

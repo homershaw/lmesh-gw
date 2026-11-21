@@ -258,9 +258,8 @@ static esp_err_t h_node_cfg(httpd_req_t *r)
     uint8_t buf[200];
     int l = js ? snprintf((char *)buf, sizeof buf, "config%c%s", 0, js) : -1;
     free(js);
-    esp_err_t e = (l > 0 && l < (int)sizeof buf)
-        ? lmesh_send_udp(node, lmesh_next_seq(), LMESH_PORT_MQTT_DN, LMESH_PORT_MQTT_DN, buf, l) : ESP_ERR_INVALID_SIZE;
-    cJSON_AddBoolToObject(o, "ok", e == ESP_OK);
+    bool ok = l > 0 && l < (int)sizeof buf && gw_downlink(node, buf, l);
+    cJSON_AddBoolToObject(o, "ok", ok);
     return send_json(r, o);
 }
 

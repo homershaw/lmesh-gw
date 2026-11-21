@@ -70,8 +70,10 @@ End-node agent duties (any MCU + E52 with `AT+HEAD=1`, `AT+TYPE` set, unicast to
 2. **PING** → reply PONG with the same seq.
 3. **UDP dport 502**: payload `[unit][PDU]`. Run it as Modbus RTU on the RS-485/UART (add CRC), then reply UDP sport 502 → dport 502 with `[unit][response PDU]` and **the same seq**. Fragment if the reply is over 193 B (FC3 with more than 95 registers).
 4. **MQTT up**: send UDP dport 1883 with `subtopic\0payload`. The gateway publishes it to `<base>/<NODE4HEX>/subtopic`.
-5. **MQTT down**: the gateway sends UDP dport 1884 with `subtopic\0payload` from `<base>/<NODE>/set/subtopic`.
+5. **MQTT down**: the gateway sends UDP dport 1884 with `subtopic\0payload` from `<base>/<NODE>/set/subtopic`. **Ack it** with an empty UDP datagram, same seq, back to port 1884. The gateway resends up to 3 times with the same seq until it gets the ack, so ignore a repeated seq (but ack it again).
 6. **UDP bridge replies**: answer to whatever source port the request came from (0xC000+slot).
+
+Space your frames: the E52 takes one frame at a time and silently drops one that arrives while it is still busy with CSMA backoff, airtime and the receiver's ack. Pacing by airtime alone lost frames; wait airtime + CSMA_RNG + ~30 ms between frames.
 
 Avoid sending anything that starts with `AT+`. The module treats it as a command. LMESH frames always start with 0x1x, so normal traffic can't hit this.
 
