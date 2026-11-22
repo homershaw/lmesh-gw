@@ -4,3 +4,7 @@ sdkconfig.old
 managed_components/
 dependencies.lock
 .vscode/
+
+# editor lock files left while a document is open
+.~lock.*#
+~$*
