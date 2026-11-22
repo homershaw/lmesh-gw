@@ -389,6 +389,23 @@ static esp_err_t h_sync(httpd_req_t *r)
     return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
 }
 
+char *survey_dump(bool csv);
+void survey_clear(void);
+
+/* GET /api/survey: points as JSON. GET /api/survey.csv: the same as a file. POST: clear. */
+static esp_err_t h_survey(httpd_req_t *r)
+{
+    if (r->method == HTTP_POST) { survey_clear(); return httpd_resp_sendstr(r, "{\"ok\":true}"); }
+    bool csv = strstr(r->uri, ".csv") != NULL;
+    char *s = survey_dump(csv);
+    if (!s) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    httpd_resp_set_type(r, csv ? "text/csv" : "application/json");
+    if (csv) httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"lmesh-survey.csv\"");
+    esp_err_t e = httpd_resp_sendstr(r, s);
+    free(s);
+    return e;
+}
+
 const char *meshrate_start(int rate, bool force);
 int meshrate_status(const char **log);
 
@@ -511,6 +528,9 @@ void web_start(void)
         { .uri = "/api/nodefw/upload", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw_upload },
         { .uri = "/api/nodefw", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_nodefw },
         { .uri = "/api/nodefw", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw },
+        { .uri = "/api/survey", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_survey },
+        { .uri = "/api/survey.csv", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_survey },
+        { .uri = "/api/survey", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_survey },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);

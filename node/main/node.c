@@ -15,6 +15,7 @@
 #include "node.h"
 #include "config.h"
 #include "rtu.h"
+#include "gps.h"
 #include "lmesh.h"
 #include "e52.h"
 #include "cJSON.h"
@@ -193,6 +194,27 @@ static void poll_once(void)
     free(b);
 }
 
+/* Survey unit: one position report with the link as seen right now. Kept
+ * under one radio frame. "n" counts reports, so gaps show what was lost;
+ * "rtt" is a ping to the gateway taken for this report (-1 = no answer). */
+static void publish_pos(void)
+{
+    static uint16_t n;
+    gps_fix_t g;
+    bool alive = gps_get(&g);
+    int32_t rtt = lmesh_ping(s_gw, 4000);
+    e52_route_t rt;
+    bool have = e52_route_to(s_gw, &rt, 1000);
+    char b[200];
+    int l = snprintf(b, sizeof b, "{\"n\":%u,\"fix\":%d", ++n, g.fix ? 1 : 0);
+    if (g.fix) l += snprintf(b + l, sizeof b - l, ",\"lat\":%.6f,\"lon\":%.6f,\"alt\":%.0f,\"hdop\":%.1f,\"spd\":%.1f", g.lat, g.lon, g.alt, g.hdop, g.spd_kmh);
+    l += snprintf(b + l, sizeof b - l, ",\"sats\":%u", g.sats);
+    if (g.utc[0]) l += snprintf(b + l, sizeof b - l, ",\"utc\":\"%s\"", g.utc);
+    if (have) l += snprintf(b + l, sizeof b - l, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
+    l += snprintf(b + l, sizeof b - l, ",\"rtt\":%ld%s}", (long)rtt, alive ? "" : ",\"gps\":\"silent\"");
+    publish("pos", b);
+}
+
 static void trial_step(uint32_t now)
 {
     if (s_trial.state == 1 && now >= s_trial.at_s) {
@@ -225,12 +247,14 @@ static void trial_step(uint32_t now)
 
 static void poll_task(void *a)
 {
+    uint32_t next_pos = uptime_s() + 8;
     uint32_t next_poll = uptime_s() + 5, next_ann = uptime_s() + REANNOUNCE_S, next_status = uptime_s() + 20;
     for (;;) {
         uint32_t now = uptime_s(), wake = next_ann < next_status ? next_ann : next_status;
         uint16_t ps = g_cfg.poll_s;
         if (ps && next_poll < wake) wake = next_poll;
         if (s_trial.state && wake > now + 2) wake = now + 2;
+        if (g_cfg.gps && next_pos < wake) wake = next_pos;
         uint32_t note = 0;
         xTaskNotifyWait(0, UINT32_MAX, &note, pdMS_TO_TICKS(wake > now ? (wake - now) * 1000 : 0));
         now = uptime_s();
@@ -244,7 +268,10 @@ static void poll_task(void *a)
         }
         if (now >= next_ann) { set_identity(); lmesh_announce(s_gw); next_ann = now + REANNOUNCE_S; }
         if (now >= next_status) { publish_status(); next_status = now + STATUS_S; }
-        if ((note & NOTE_POLL) || (ps && now >= next_poll)) {
+        if (g_cfg.gps) {                               /* survey unit: positions instead of RTU polls */
+            if (now >= next_pos) { publish_pos(); next_pos = uptime_s() + g_cfg.pos_s; }
+            next_poll = now + 3600;
+        } else if ((note & NOTE_POLL) || (ps && now >= next_poll)) {
             poll_once();
             next_poll = uptime_s() + (ps ? ps : 3600);
         }

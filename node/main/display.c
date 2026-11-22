@@ -17,6 +17,7 @@
 #include "node.h"
 #include "rtu.h"
 #include "e52.h"
+#include "gps.h"
 #include "driver/i2c_master.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -188,6 +189,17 @@ static void compose(uint32_t tick)
     if (ns.last_pub_s) { fmt_dur(up - ns.last_pub_s, a, sizeof a); line(4, "pub %s ago up %s", a, b); }
     else line(4, "no pub yet up %s", b);
 
+    if (g_cfg.gps) {                             /* survey unit: position instead of RTU values */
+        gps_fix_t g;
+        bool alive = gps_get(&g);
+        line(3, "GPS %s sats %u", !alive ? "silent" : g.fix ? "fix" : "no fix", g.sats);
+        if (g.fix) {
+            line(5, "lat %.5f", g.lat);
+            line(6, "lon %.5f", g.lon);
+            line(7, "alt %.0fm %.0fkm/h", g.alt, g.spd_kmh);
+        }
+        return;
+    }
     int n = node_value_count();
     int pages = n > 6 ? (n + 5) / 6 : 1;
     int base = (int)(tick / 5 % pages) * 6;   /* each page stays for 10 s */

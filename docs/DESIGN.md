@@ -312,7 +312,7 @@ Open:
 - **Gateway display:** same OLED on the S31 once free pins are known.
 - **Network key:** set your own `AT+KEY` and a non-default PAN, managed from the gateway and node config.
 - **Wio-E5 RF instrument:** sniffer and carrier generator on stock firmware; a 902–928 MHz RSSI sweep would need custom firmware.
-- **GPS survey node:** see §12.
+- **GPS survey unit:** firmware and gateway Survey tab are built (§12) but untested: needs a GPS wired to a node and a walk.
 - **DHCP leases:** persisting them would need a patched IDF dhcpserver; not done.
 - **Node with DE-pin transceivers:** use UART RS-485 half-duplex mode with RTS on D1.
 - **Node board** on the -1U modules and the daughter-board radio section.
@@ -339,31 +339,52 @@ Over the mesh (`shared/fwproto.h`, `main/nodefw.c`, `node/main/fwup.c`):
 
 The E52 modules run Ebyte's firmware and are not updated by any of this.
 
-## 12. Planned: GPS survey node
+## 12. GPS survey unit (built, not yet tested on hardware)
 
-Goal: carry a node around, log position with signal strength, and compute path loss against distance from the gateway.
+Goal: carry a unit around, log position with signal strength, see how multi-hop routes behave, and compute path loss against distance from the gateway.
 
-**Module.** The boards marked NEO6MV2 carry a u-blox NEO-6M: 3.3–5 V supply, about 45 mA, NMEA sentences at 9600 baud once a second, 3.3 V logic. Only its TX pin is needed. Expect a first fix to take from half a minute outdoors to several minutes; indoors it may never fix. (From memory of the common module; check the board in hand.)
+**The unit** is a XIAO C6, an E52 and a GPS module. No RTU and no RS-485 board. It runs the normal node firmware (0.7.0 or newer) with one setting changed.
 
-**Where it connects.** The C6's two UARTs are taken by RS-485 and the E52. Options:
+**Module.** The boards marked NEO6MV2 carry a u-blox NEO-6M: 3.3–5 V supply, about 45 mA, NMEA sentences at 9600 baud once a second, 3.3 V logic. Expect a first fix to take from half a minute outdoors to several minutes; indoors it may never fix. (From memory of the common module; check the board in hand.) Any NMEA receiver at 9600 baud should work: the firmware reads only GGA and RMC and drops sentences with a bad checksum.
 
-| Option | Wiring | Trade-off |
-|---|---|---|
-| A. Survey build without an RTU | GPS TX → D3 (UART0 RX, the RS-485 receive pin) | Simplest and most robust. A mobile node has no RTU anyway. One setting switches UART0 between RS-485 and GPS. |
-| B. GPS as well as an RTU | GPS TX → a spare pin (D0, D1, D7 or D8), received in software at 9600 baud | Keeps the RTU. More code, and timing has to share the CPU with Wi-Fi. |
-| C. GPS on the C6's low-power UART | fixed pins, on the XIAO's underside pads | Needs soldering to the back; pin numbers to be confirmed against Seeed's pinout. |
+**Wiring.**
 
-Recommendation: A for the survey unit.
+| GPS module | XIAO C6 |
+|---|---|
+| TX | D3 (GPIO21), the pin the RS-485 board's RXD used |
+| VCC | 3V3 (or 5V if the module has its own regulator) |
+| GND | GND |
+| RX | not connected |
 
-**Data.** A new message `<base>/<site>/pos`, for example every 10 s while moving:
-`{"lat":51.04512,"lon":-114.06301,"alt":1084,"sats":9,"hdop":1.1,"utc":"2026-11-22T17:03:10Z","rssi":-87,"hop":"0001"}`.
-The gateway adds what it measured for that packet (its own RSSI of the node) and the distance from its configured position.
+E52 and optional OLED as on any node.
 
-**Path loss.** With both ends known: `loss = TX power + antenna gains − RSSI`, compared with free space at 915 MHz, `91.7 + 20·log10(km)` dB. The difference is the excess loss from terrain and obstructions, which is the number worth mapping.
+**Set-up.**
+1. On the node's own page: Settings → RS-485 card → "This port is used for" → **GPS survey unit**, set the report interval (10 s default), Save, reboot.
+2. On the gateway page: Survey tab → enter the gateway's latitude and longitude and the combined antenna gain (4 dBi default for two small whips), Save.
+3. Give the unit a site ID, for example `SURVEY-1`, so its MQTT topic is readable.
 
-**Display.** On the gateway page: a plot of the track around the gateway coloured by signal, plus a loss-versus-distance chart. It can draw without internet; map tiles would need a connection. The same points go to MQTT, so any mapping tool can use them.
+**What it sends.** Every `pos_s` seconds, `<base>/<site>/pos`, one radio frame:
+`{"n":123,"fix":1,"lat":51.045120,"lon":-114.063010,"alt":1084,"hdop":1.1,"spd":3.2,"sats":9,"utc":"2026-11-22T17:03:10Z","rssi":-87,"hop":"0001","rtt":412}`
+- `n` counts reports, so gaps show what was lost on the way.
+- `rssi` and `hop` are the unit's route to the gateway at that moment; `hop` equal to the gateway's address means a direct link.
+- `rtt` is a ping to the gateway taken for this report; −1 means no answer.
+- Reports are sent without a fix too (`"fix":0`), so link quality is logged even indoors. `"gps":"silent"` means the receiver is not sending anything: check the wiring.
+
+**What the gateway adds** (`main/survey.c`), published as `<base>/<site>/survey` and kept in RAM (last 600 points):
+- its own RSSI and next hop for that unit,
+- distance from the gateway's configured position,
+- on direct links: `loss_db = TX power + antenna gain − rssi`, the free-space loss at that distance (`32.44 + 20·log10(MHz) + 20·log10(km)`), and the difference `excess_db`. That excess is what terrain and obstructions cost, the number worth mapping.
+
+**Survey tab on the gateway page.** A track plot (north up, gateway at the centre, range rings, colour by signal, white outline for relayed points), a loss-against-distance chart with the free-space line, the latest points in a table, delivery percentage from the gaps in `n`, CSV download and Clear. It draws without internet. Points are lost when the gateway restarts; use the CSV or MQTT to keep them.
+
+**The unit's display** shows GPS state and satellites, then latitude, longitude, altitude and speed in place of RTU values.
 
 **Limits to know beforehand.**
-- The E52 reports RSSI as whole dBm per route, updated only when traffic flows, and on relayed routes it seems to describe the far hop. For clean survey data the unit should be in direct range of the gateway, or record which node it heard.
+- The E52 reports RSSI as whole dBm per route, updated only when traffic flows, and on relayed routes it seems to describe the far hop. Loss is therefore only computed for direct links; relayed points still record hop, RTT and delivery.
 - A NEO-6M position is good to a few metres: fine for path loss at hundreds of metres, poor below about 50 m.
-- GPS time would also give the poll data real timestamps; today `t` is uptime.
+- The antenna gain setting shifts every loss figure by the same amount. Calibrate it once at a known short, clear distance if absolute numbers matter.
+- Modbus requests to a survey unit get exception 0x0B, since it has no RTU.
+
+**Other ways to connect a GPS, not built:** a software receiver on a spare pin (D0, D1, D7, D8) would let a node keep its RTU and have GPS; the C6's low-power UART is a third option but sits on the XIAO's underside pads.
+
+**Not done yet:** GPS time on ordinary poll data (`t` is still uptime), storing survey points across a gateway restart, map tiles.

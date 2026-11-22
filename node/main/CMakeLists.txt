@@ -5,7 +5,7 @@ if(IDF_VERSION_MAJOR LESS 6)
 endif()
 idf_component_register(
     SRCS "main.c" "config.c" "../../shared/e52.c" "../../shared/lmesh.c"
-         "rtu.c" "node.c" "display.c" "fwup.c" "../../shared/ota.c" "wifi.c" "web.c"
+         "rtu.c" "node.c" "display.c" "fwup.c" "gps.c" "../../shared/ota.c" "wifi.c" "web.c"
     INCLUDE_DIRS "." "../../shared"
     EMBED_TXTFILES "web/index.html"
     PRIV_REQUIRES ${reqs})

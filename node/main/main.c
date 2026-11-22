@@ -10,6 +10,7 @@
 #include "rtu.h"
 #include "node.h"
 #include "ota.h"
+#include "gps.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_log.h"
@@ -70,6 +71,7 @@ void app_main(void)
     cfg_load();
     wifi_start();
     rtu_init();
+    if (g_cfg.gps) gps_start();
 
     lmesh_init();
     node_start();

@@ -7,6 +7,7 @@
 #include "rtu.h"
 #include "node.h"
 #include "ota.h"
+#include "gps.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -149,6 +150,13 @@ static esp_err_t h_status(httpd_req_t *r)
     if (e52_route_to(ns.gw_addr, &rt, 10000)) {
         cJSON_AddNumberToObject(o, "gw_rssi", rt.rssi);
         snprintf(h, sizeof h, "%04X", rt.hop); cJSON_AddStringToObject(o, "gw_hop", h);
+    }
+    if (g_cfg.gps) {
+        gps_fix_t g;
+        bool alive = gps_get(&g);
+        cJSON_AddStringToObject(o, "gps", !alive ? "silent" : g.fix ? "fix" : "no fix");
+        cJSON_AddNumberToObject(o, "sats", g.sats);
+        if (g.fix) { cJSON_AddNumberToObject(o, "lat", g.lat); cJSON_AddNumberToObject(o, "lon", g.lon); }
     }
     cJSON_AddNumberToObject(o, "tx", es.tx_frames);
     cJSON_AddNumberToObject(o, "rx", es.rx_frames);
