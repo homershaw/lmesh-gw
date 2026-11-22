@@ -223,6 +223,22 @@ def add_table(doc, rows):
         cells = t.add_row().cells
         for i in range(ncol):
             add_inline(cells[i].paragraphs[0], row[i] if i < len(row) else '', 10)
+    # Column widths follow the content: short label columns stay narrow and the
+    # text columns get the room. Set on every cell, which is what Word, ONLYOFFICE
+    # and LibreOffice all honour.
+    plain = lambda s: re.sub(r'[*`]|\]\([^)]*\)|\[', '', s)
+    want = []
+    for i in range(ncol):
+        longest = max(len(plain(r[i])) if i < len(r) else 0 for r in [head] + body)
+        want.append(min(max(longest, 6), 60))
+    total_in, floor_in = 6.5, 0.8
+    widths = [max(floor_in, total_in * w / sum(want)) for w in want]
+    scale = total_in / sum(widths)
+    widths = [w * scale for w in widths]
+    t.autofit = False
+    for row in t.rows:
+        for i, c in enumerate(row.cells):
+            c.width = Inches(widths[i])
     # repeat the header row when the table breaks across pages
     trpr = t.rows[0]._tr.get_or_add_trPr()
     el = OxmlElement('w:tblHeader')
