@@ -19,6 +19,7 @@ static const char *TAG = "main";
 void wifi_start(void);
 void web_start(void);
 void display_start(void);
+void fwup_start(void);
 
 /* A new node firmware is kept once it has reached the gateway over the mesh:
  * that is the path the next update would have to come in by. On a bench with
@@ -73,6 +74,7 @@ void app_main(void)
     lmesh_init();
     node_start();
     web_start();
+    fwup_start();
     display_start();
 
     if (lmesh_start() == ESP_OK) {

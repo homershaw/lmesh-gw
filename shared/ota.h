@@ -15,7 +15,7 @@ void ota_confirm(void);              /* keep the running firmware (manual overri
 const char *ota_slot(void);          /* label of the running app partition */
 
 /* streamed update into the idle slot */
-esp_err_t ota_begin(void);
+esp_err_t ota_begin(size_t size);         /* 0 = unknown: erases the whole slot */
 esp_err_t ota_write(const uint8_t *data, size_t len);   /* first call needs >= 512 bytes */
 esp_err_t ota_finish(void);          /* verify + select for next boot; caller restarts */
 void ota_abort(void);

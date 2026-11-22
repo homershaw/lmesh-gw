@@ -131,6 +131,14 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
   <input type="file" id="fw_file" accept=".bin" style="width:auto"> <button class="btn warn" onclick="fwUpload()">Upload and restart</button>
   <pre id="fw_out" style="display:none"></pre>
  </div>
+ <div class="card"><h3>Node firmware over the mesh</h3>
+  <p id="nf_info"></p>
+  <input type="file" id="nf_file" accept=".bin" style="width:auto"> <button class="btn" onclick="nfUpload()">Store on gateway</button>
+  <p style="margin:12px 0 6px">Send the stored firmware to one node. Takes about half an hour at 21.9 kbps and longer at 7 kbps; the mesh stays usable but slower. An interrupted transfer resumes when started again.</p>
+  <select id="nf_node" style="width:auto"></select>
+  <button class="btn warn" onclick="nfSend()">Send to node</button> <button class="btn sec" onclick="api('/api/nodefw',{cancel:true})">Cancel</button>
+  <pre id="nf_out" style="display:none"></pre>
+ </div>
 </section>
 </main>
 <script>
@@ -171,7 +179,7 @@ function meshRate(){api('/api/mesh/rate',{rate:Number($('mr_rate').value),force:
 function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
  api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
 function atq(c){$('at').value=c;at();return false}
-function fwInfo(s){let t='Running '+s.fw+' from slot '+s.slot+'.';
+let nfInit=0;function fwInfo(s){if(!nfInit){nfInit=1;nfPoll();nfNodes()}let t='Running '+s.fw+' from slot '+s.slot+'.';
  if(s.ota_trial)t+=' <b>On trial:</b> goes back to the previous firmware in '+s.ota_left+' s unless confirmed. <a href="#" onclick="api(\'/api/ota/confirm\',{});return false">Keep it</a>';
  $('fw_info').innerHTML=t}
 function fwUpload(){const f=$('fw_file').files[0],o=$('fw_out');if(!f)return;if(!confirm('Upload '+f.name+' ('+Math.round(f.size/1024)+' KB) and restart?'))return;
@@ -179,6 +187,17 @@ function fwUpload(){const f=$('fw_file').files[0],o=$('fw_out');if(!f)return;if(
  x.upload.onprogress=e=>{o.textContent='Uploading '+Math.round(100*e.loaded/e.total)+' %'};
  x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Written and verified. Restarting… this page reloads in 20 s.':'Rejected: '+(r.err||x.status);if(r.ok)setTimeout(()=>location.reload(),20000)};
  x.onerror=()=>{o.textContent='Upload failed (connection lost)'};x.send(f)}
+function nfShow(r){$('nf_info').textContent=r.size?'Gateway holds node firmware '+r.ver+' ('+Math.round(r.size/1024)+' KB).':'No node firmware stored on the gateway yet (file: node/build/lmesh_node.bin).';
+ if(r.state||r.err){const o=$('nf_out');o.style.display='block';let t=(r.err?r.err+'\n':'')+r.log;
+  if(r.state==1&&r.size){const p=r.sent/r.size,bps=r.secs?r.sent/r.secs:0;t+='node '+r.node+': '+Math.round(100*p)+' %  '+Math.round(r.sent/1024)+' of '+Math.round(r.size/1024)+' KB'+(bps>50?'  about '+Math.ceil((r.size-r.sent)/bps/60)+' min left':'')}
+  o.textContent=t}
+ if(r.state==1)setTimeout(nfPoll,3000)}
+function nfPoll(){api('/api/nodefw').then(nfShow)}
+function nfNodes(){api('/api/nodes').then(a=>{$('nf_node').innerHTML=a.filter(n=>n.kind=='rtu').map(n=>`<option value="${n.addr_dec}">${n.addr} ${n.site||''} (fw ${n.fw})</option>`).join('')})}
+function nfUpload(){const f=$('nf_file').files[0],o=$('nf_out');if(!f)return;o.style.display='block';o.textContent='Uploading to gateway…';
+ const x=new XMLHttpRequest();x.open('POST','/api/nodefw/upload');x.upload.onprogress=e=>{o.textContent='Uploading to gateway '+Math.round(100*e.loaded/e.total)+' %'};
+ x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Stored.':'Rejected: '+(r.err||x.status);nfPoll()};x.onerror=()=>{o.textContent='Upload failed'};x.send(f)}
+function nfSend(){const n=Number($('nf_node').value);if(!n||!confirm('Send the stored firmware to this node over the mesh?'))return;api('/api/nodefw',{node:n}).then(nfShow)}
 function reboot(){if(confirm('Reboot gateway?'))api('/api/reboot',{})}
 function mb(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
  const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};

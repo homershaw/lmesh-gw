@@ -199,6 +199,8 @@ static void compose(uint32_t tick)
     }
 }
 
+int fwup_percent(void);
+
 static void display_task(void *arg)
 {
     bool have = false;
@@ -217,6 +219,7 @@ static void display_task(void *arg)
             }
         }
         compose(tick);
+        if (fwup_percent() >= 0) line(4, "FW UPDATE %d%%", fwup_percent());
         if (flush() != ESP_OK) {                     /* unplugged: drop it and probe again */
             ESP_LOGW(TAG, "display not answering");
             i2c_master_bus_rm_device(s_dev);

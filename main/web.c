@@ -414,7 +414,43 @@ static esp_err_t h_meshrate(httpd_req_t *r)
 /* ---- firmware update ---- */
 bool web_seen(void) { return s_web_seen; }
 
-static esp_err_t h_ota(httpd_req_t *r) { return ota_http_upload(r); }
+void nodefw_invalidate(void);
+esp_err_t nodefw_http_upload(httpd_req_t *r);
+const char *nodefw_send(int node);
+void nodefw_cancel(void);
+void nodefw_status(int *state, uint32_t *size, uint32_t *sent, uint32_t *secs, uint16_t *node, const char **ver, const char **log);
+
+/* the gateway's own update reuses the slot that holds the node image */
+static esp_err_t h_ota(httpd_req_t *r) { nodefw_invalidate(); return ota_http_upload(r); }
+
+static esp_err_t h_nodefw_upload(httpd_req_t *r) { return nodefw_http_upload(r); }
+
+/* GET: image held + transfer progress. POST {"node":8881} starts, {"cancel":true} stops. */
+static esp_err_t h_nodefw(httpd_req_t *r)
+{
+    cJSON *o = cJSON_CreateObject();
+    if (r->method == HTTP_POST) {
+        cJSON *in = read_json(r);
+        if (in && cJSON_IsTrue(cJSON_GetObjectItem(in, "cancel"))) nodefw_cancel();
+        else {
+            const char *err = in ? nodefw_send(jint(in, "node", -1)) : "bad json";
+            if (err) cJSON_AddStringToObject(o, "err", err);
+        }
+        cJSON_Delete(in);
+    }
+    int st; uint32_t size, sent, secs; uint16_t node; const char *ver, *log;
+    nodefw_status(&st, &size, &sent, &secs, &node, &ver, &log);
+    char h[8];
+    snprintf(h, sizeof h, "%04X", node);
+    cJSON_AddNumberToObject(o, "state", st);
+    cJSON_AddNumberToObject(o, "size", size);
+    cJSON_AddStringToObject(o, "ver", ver);
+    cJSON_AddStringToObject(o, "node", h);
+    cJSON_AddNumberToObject(o, "sent", sent);
+    cJSON_AddNumberToObject(o, "secs", secs);
+    cJSON_AddStringToObject(o, "log", log);
+    return send_json(r, o);
+}
 
 static esp_err_t h_ota_confirm(httpd_req_t *r)
 {
@@ -472,6 +508,9 @@ void web_start(void)
         { .uri = "/api/mesh/rate", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_meshrate },
         { .uri = "/api/ota", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota },
         { .uri = "/api/ota/confirm", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota_confirm },
+        { .uri = "/api/nodefw/upload", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw_upload },
+        { .uri = "/api/nodefw", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_nodefw },
+        { .uri = "/api/nodefw", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);

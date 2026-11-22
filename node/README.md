@@ -71,3 +71,13 @@ The flash holds two firmware slots (`partitions.csv`). After one USB flash of a 
 * **On trial:** the new firmware must reach the gateway over the mesh within 10 minutes. If it cannot, the node restarts into the previous firmware by itself. On a bench with no gateway, use **Keep it** on the node's page.
 
 The gateway works the same way from its own page (`build/lmesh_gw.bin`); it keeps a new firmware once someone logs in to its web page.
+
+### Over the mesh (no site visit)
+
+On the gateway page, in the **Node firmware over the mesh** card: store `node/build/lmesh_node.bin` on the gateway once, pick a node, **Send to node**. The gateway feeds the image to the node one radio frame at a time (`shared/fwproto.h`).
+
+* Measured: 1.07 MB in 46.5 minutes at 21.9 kbps over one hop, about 390 bytes/s. Expect two to three times longer at 7 kbps.
+* Every packet carries a checksum and the whole image is checked again at the end, before the node installs anything.
+* An interrupted transfer resumes when started again, as long as the node has not restarted.
+* The node then runs the new firmware on trial, exactly as with a Wi-Fi upload, and returns to the old one if it cannot reach the gateway.
+* Needs node firmware 0.6.1 or newer on the node being updated.

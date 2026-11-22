@@ -79,14 +79,15 @@ static char s_err[96];
 
 const char *ota_error(void) { return s_err; }
 
-esp_err_t ota_begin(void)
+esp_err_t ota_begin(size_t size)
 {
     if (s_open) { esp_ota_abort(s_h); s_open = false; }
     s_err[0] = 0;
     s_got = 0;
     s_part = esp_ota_get_next_update_partition(NULL);
     if (!s_part) { snprintf(s_err, sizeof s_err, "no second firmware slot (flash this build once over USB)"); return ESP_ERR_NOT_FOUND; }
-    esp_err_t e = esp_ota_begin(s_part, OTA_SIZE_UNKNOWN, &s_h);
+    if (size > s_part->size) { snprintf(s_err, sizeof s_err, "image is larger than the firmware slot"); return ESP_ERR_INVALID_SIZE; }
+    esp_err_t e = esp_ota_begin(s_part, size ? size : OTA_SIZE_UNKNOWN, &s_h);
     if (e != ESP_OK) { snprintf(s_err, sizeof s_err, "cannot open slot %s: %s", s_part->label, esp_err_to_name(e)); return e; }
     s_open = true;
     return ESP_OK;
@@ -141,7 +142,7 @@ esp_err_t ota_http_upload(httpd_req_t *r)
     char msg[160];
     int left = r->content_len;
     uint8_t *buf = malloc(4096);
-    esp_err_t e = buf ? ota_begin() : ESP_ERR_NO_MEM;
+    esp_err_t e = buf ? ota_begin(r->content_len) : ESP_ERR_NO_MEM;
     if (!buf) snprintf(s_err, sizeof s_err, "out of memory");
     size_t fill = 0;
     bool first = true;
