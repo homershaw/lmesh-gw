@@ -38,6 +38,9 @@ void cfg_defaults(node_cfg_t *c)
     strcpy(c->ap_pass, "lmesh1234");
     strcpy(c->name, "lmesh-node");
     c->ext_ant = false;
+    c->oled_sda = 20;            /* XIAO D9 */
+    c->oled_scl = 18;            /* XIAO D10 */
+    c->oled_sh1106 = true;       /* the 1.3" modules in use; SSD1306 selectable in Settings */
     /* must match the gateway */
     c->e52_channel = 65;            /* 915.125 MHz */
     c->e52_rate = 1;                /* 21.875 kbps */
@@ -98,6 +101,12 @@ bool cfg_from_json(const char *json)
     jstr(o, "web_pass", c->web_pass, sizeof c->web_pass, true);
     cJSON *b = cJSON_GetObjectItem(o, "ext_ant");
     if (cJSON_IsBool(b)) c->ext_ant = cJSON_IsTrue(b);
+    b = cJSON_GetObjectItem(o, "oled_sh1106");
+    if (cJSON_IsBool(b)) c->oled_sh1106 = cJSON_IsTrue(b);
+    b = cJSON_GetObjectItem(o, "oled_sda");
+    if (cJSON_IsNumber(b) && b->valueint >= -1 && b->valueint <= 23) c->oled_sda = (int8_t)b->valueint;
+    b = cJSON_GetObjectItem(o, "oled_scl");
+    if (cJSON_IsNumber(b) && b->valueint >= -1 && b->valueint <= 23) c->oled_scl = (int8_t)b->valueint;
 
     JN("e52_channel", e52_channel, 52, 77);
     JN("e52_rate", e52_rate, 0, 2);
@@ -157,6 +166,9 @@ char *cfg_to_json(bool secrets)
     cJSON_AddStringToObject(o, "ap_pass", secrets ? c->ap_pass : MASK);
     cJSON_AddStringToObject(o, "web_pass", secrets ? c->web_pass : (c->web_pass[0] ? MASK : ""));
     cJSON_AddBoolToObject(o, "ext_ant", c->ext_ant);
+    cJSON_AddBoolToObject(o, "oled_sh1106", c->oled_sh1106);
+    cJSON_AddNumberToObject(o, "oled_sda", c->oled_sda);
+    cJSON_AddNumberToObject(o, "oled_scl", c->oled_scl);
     cJSON_AddNumberToObject(o, "e52_channel", c->e52_channel);
     cJSON_AddNumberToObject(o, "e52_rate", c->e52_rate);
     cJSON_AddNumberToObject(o, "e52_power", c->e52_power);

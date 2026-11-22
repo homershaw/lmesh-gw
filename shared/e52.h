@@ -37,3 +37,12 @@ void e52_get_stats(e52_stats_t *s);
 /* module's SRC_ADDR, CHANNEL and PANID match g_cfg (detects a swapped/unprogrammed module) */
 bool e52_matches_cfg(void);
 uint32_t e52_airtime_ms(size_t len);
+
+/* One entry of the module's route table (AT+ROUTER_READ=?). rssi is the last
+ * frame heard from the next hop, in dBm. */
+typedef struct { uint16_t dst, hop; int8_t score; int16_t rssi; } e52_route_t;
+#define E52_MAX_ROUTES 16
+/* Copy the route table; re-read from the module only if the cached copy is
+ * older than max_age_ms. Returns the number of entries. */
+int  e52_routes(e52_route_t *out, int max, uint32_t max_age_ms);
+bool e52_route_to(uint16_t dst, e52_route_t *r, uint32_t max_age_ms);

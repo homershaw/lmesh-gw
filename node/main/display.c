@@ -1,0 +1,240 @@
+/*
+ * Optional status display: 128x64 I2C OLED (SSD1306 or SH1106) at 0x3C/0x3D.
+ * The node runs the same with or without it; the display can be plugged in
+ * later and is picked up within a few seconds.
+ *
+ *  row 0  site id
+ *  row 1  mesh address, frequency, air rate
+ *  row 2  link to the gateway: RSSI of the next hop, direct or via which node
+ *  row 3  RTU counters
+ *  row 4  last publish, uptime
+ *  row 5-7 latest poll values, two per row (pages if there are more than six)
+ */
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include "config.h"
+#include "node.h"
+#include "rtu.h"
+#include "e52.h"
+#include "driver/i2c_master.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_timer.h"
+#include "esp_log.h"
+
+static const char *TAG = "oled";
+
+#define COLS 21
+#define ROWS 8
+
+/* classic 5x7 font, ASCII 0x20..0x7E, one byte per column, bit 0 = top */
+static const uint8_t FONT[95][5] = {
+    {0x00,0x00,0x00,0x00,0x00},{0x00,0x00,0x5F,0x00,0x00},{0x00,0x07,0x00,0x07,0x00},{0x14,0x7F,0x14,0x7F,0x14},
+    {0x24,0x2A,0x7F,0x2A,0x12},{0x23,0x13,0x08,0x64,0x62},{0x36,0x49,0x55,0x22,0x50},{0x00,0x05,0x03,0x00,0x00},
+    {0x00,0x1C,0x22,0x41,0x00},{0x00,0x41,0x22,0x1C,0x00},{0x14,0x08,0x3E,0x08,0x14},{0x08,0x08,0x3E,0x08,0x08},
+    {0x00,0x50,0x30,0x00,0x00},{0x08,0x08,0x08,0x08,0x08},{0x00,0x60,0x60,0x00,0x00},{0x20,0x10,0x08,0x04,0x02},
+    {0x3E,0x51,0x49,0x45,0x3E},{0x00,0x42,0x7F,0x40,0x00},{0x42,0x61,0x51,0x49,0x46},{0x21,0x41,0x45,0x4B,0x31},
+    {0x18,0x14,0x12,0x7F,0x10},{0x27,0x45,0x45,0x45,0x39},{0x3C,0x4A,0x49,0x49,0x30},{0x01,0x71,0x09,0x05,0x03},
+    {0x36,0x49,0x49,0x49,0x36},{0x06,0x49,0x49,0x29,0x1E},{0x00,0x36,0x36,0x00,0x00},{0x00,0x56,0x36,0x00,0x00},
+    {0x08,0x14,0x22,0x41,0x00},{0x14,0x14,0x14,0x14,0x14},{0x00,0x41,0x22,0x14,0x08},{0x02,0x01,0x51,0x09,0x06},
+    {0x32,0x49,0x79,0x41,0x3E},{0x7E,0x11,0x11,0x11,0x7E},{0x7F,0x49,0x49,0x49,0x36},{0x3E,0x41,0x41,0x41,0x22},
+    {0x7F,0x41,0x41,0x22,0x1C},{0x7F,0x49,0x49,0x49,0x41},{0x7F,0x09,0x09,0x09,0x01},{0x3E,0x41,0x49,0x49,0x7A},
+    {0x7F,0x08,0x08,0x08,0x7F},{0x00,0x41,0x7F,0x41,0x00},{0x20,0x40,0x41,0x3F,0x01},{0x7F,0x08,0x14,0x22,0x41},
+    {0x7F,0x40,0x40,0x40,0x40},{0x7F,0x02,0x0C,0x02,0x7F},{0x7F,0x04,0x08,0x10,0x7F},{0x3E,0x41,0x41,0x41,0x3E},
+    {0x7F,0x09,0x09,0x09,0x06},{0x3E,0x41,0x51,0x21,0x5E},{0x7F,0x09,0x19,0x29,0x46},{0x46,0x49,0x49,0x49,0x31},
+    {0x01,0x01,0x7F,0x01,0x01},{0x3F,0x40,0x40,0x40,0x3F},{0x1F,0x20,0x40,0x20,0x1F},{0x3F,0x40,0x38,0x40,0x3F},
+    {0x63,0x14,0x08,0x14,0x63},{0x07,0x08,0x70,0x08,0x07},{0x61,0x51,0x49,0x45,0x43},{0x00,0x7F,0x41,0x41,0x00},
+    {0x02,0x04,0x08,0x10,0x20},{0x00,0x41,0x41,0x7F,0x00},{0x04,0x02,0x01,0x02,0x04},{0x40,0x40,0x40,0x40,0x40},
+    {0x00,0x01,0x02,0x04,0x00},{0x20,0x54,0x54,0x54,0x78},{0x7F,0x48,0x44,0x44,0x38},{0x38,0x44,0x44,0x44,0x20},
+    {0x38,0x44,0x44,0x48,0x7F},{0x38,0x54,0x54,0x54,0x18},{0x08,0x7E,0x09,0x01,0x02},{0x0C,0x52,0x52,0x52,0x3E},
+    {0x7F,0x08,0x04,0x04,0x78},{0x00,0x44,0x7D,0x40,0x00},{0x20,0x40,0x44,0x3D,0x00},{0x7F,0x10,0x28,0x44,0x00},
+    {0x00,0x41,0x7F,0x40,0x00},{0x7C,0x04,0x18,0x04,0x78},{0x7C,0x08,0x04,0x04,0x78},{0x38,0x44,0x44,0x44,0x38},
+    {0x7C,0x14,0x14,0x14,0x08},{0x08,0x14,0x14,0x18,0x7C},{0x7C,0x08,0x04,0x04,0x08},{0x48,0x54,0x54,0x54,0x20},
+    {0x04,0x3F,0x44,0x40,0x20},{0x3C,0x40,0x40,0x20,0x7C},{0x1C,0x20,0x40,0x20,0x1C},{0x3C,0x40,0x30,0x40,0x3C},
+    {0x44,0x28,0x10,0x28,0x44},{0x0C,0x50,0x50,0x50,0x3C},{0x44,0x64,0x54,0x4C,0x44},{0x00,0x08,0x36,0x41,0x00},
+    {0x00,0x00,0x7F,0x00,0x00},{0x00,0x41,0x36,0x08,0x00},{0x08,0x04,0x08,0x10,0x08},
+};
+
+static i2c_master_bus_handle_t s_bus;
+static i2c_master_dev_handle_t s_dev;
+static char s_text[ROWS][COLS + 1];
+
+static esp_err_t cmds(const uint8_t *c, size_t n)
+{
+    uint8_t b[32];
+    if (n > sizeof b - 1) return ESP_ERR_INVALID_SIZE;
+    b[0] = 0x00;                              /* control byte: commands follow */
+    memcpy(b + 1, c, n);
+    return i2c_master_transmit(s_dev, b, n + 1, 100);
+}
+
+static esp_err_t panel_init(void)
+{
+    /* The two controllers share most commands but not the power and timing
+     * ones; sending the SSD1306 values to an SH1106 leaves dark lines. */
+    static const uint8_t ssd1306[] = {
+        0xAE,             /* display off */
+        0xD5, 0x80,       /* clock divide */
+        0xA8, 0x3F,       /* multiplex 64 */
+        0xD3, 0x00,       /* display offset 0 */
+        0x40,             /* start line 0 */
+        0x8D, 0x14,       /* charge pump on */
+        0x20, 0x02,       /* page addressing */
+        0xA1, 0xC8,       /* flip both axes: connector at the top */
+        0xDA, 0x12,       /* COM pins for 128x64 */
+        0x81, 0x60,       /* contrast: moderate, kinder to the panel */
+        0xD9, 0xF1, 0xDB, 0x40,
+        0xA4, 0xA6,       /* follow RAM, not inverted */
+        0xAF,             /* display on */
+    };
+    static const uint8_t sh1106[] = {
+        0xAE,
+        0xD5, 0x50,       /* clock divide / oscillator: datasheet default */
+        0xA8, 0x3F,
+        0xD3, 0x00,
+        0x40,
+        0xAD, 0x8B,       /* built-in DC-DC on */
+        0x32,             /* pump voltage 8.0 V */
+        0xA1, 0xC8,
+        0xDA, 0x12,
+        0x81, 0x80,
+        0xD9, 0x22,       /* pre-charge / discharge: datasheet default */
+        0xDB, 0x35,       /* VCOM deselect: datasheet default */
+        0xA4, 0xA6,
+        0xAF,
+    };
+    return g_cfg.oled_sh1106 ? cmds(sh1106, sizeof sh1106) : cmds(ssd1306, sizeof ssd1306);
+}
+
+static esp_err_t flush(void)
+{
+    int xoff = g_cfg.oled_sh1106 ? 2 : 0;     /* SH1106 RAM is 132 wide, glass is centred */
+    for (int row = 0; row < ROWS; row++) {
+        uint8_t pos[3] = { 0xB0 | row, 0x00 | (xoff & 0x0F), 0x10 | (xoff >> 4) };
+        esp_err_t e = cmds(pos, 3);
+        if (e != ESP_OK) return e;
+        uint8_t d[129];
+        memset(d, 0, sizeof d);
+        d[0] = 0x40;                          /* control byte: data follows */
+        const char *t = s_text[row];
+        for (int c = 0; c < COLS && t[c]; c++) {
+            uint8_t ch = (uint8_t)t[c];
+            if (ch < 0x20 || ch > 0x7E) ch = '?';
+            memcpy(d + 1 + 1 + c * 6, FONT[ch - 0x20], 5);
+        }
+        e = i2c_master_transmit(s_dev, d, sizeof d, 100);
+        if (e != ESP_OK) return e;
+    }
+    return ESP_OK;
+}
+
+static bool attach(void)
+{
+    static const uint8_t addrs[] = { 0x3C, 0x3D };
+    for (unsigned i = 0; i < sizeof addrs; i++) {
+        if (i2c_master_probe(s_bus, addrs[i], 50) != ESP_OK) continue;
+        i2c_device_config_t dc = { .dev_addr_length = I2C_ADDR_BIT_LEN_7, .device_address = addrs[i], .scl_speed_hz = 400000 };
+        if (i2c_master_bus_add_device(s_bus, &dc, &s_dev) != ESP_OK) return false;
+        if (panel_init() == ESP_OK) {
+            ESP_LOGI(TAG, "%s display at 0x%02X", g_cfg.oled_sh1106 ? "SH1106" : "SSD1306", addrs[i]);
+            return true;
+        }
+        i2c_master_bus_rm_device(s_dev);
+        s_dev = NULL;
+    }
+    return false;
+}
+
+static void fmt_dur(uint32_t s, char *b, size_t n)
+{
+    if (s < 100) snprintf(b, n, "%lus", (unsigned long)s);
+    else if (s < 6000) snprintf(b, n, "%lum", (unsigned long)(s / 60));
+    else if (s < 360000) snprintf(b, n, "%luh%02lum", (unsigned long)(s / 3600), (unsigned long)(s % 3600 / 60));
+    else snprintf(b, n, "%lud", (unsigned long)(s / 86400));
+}
+
+/* format one text row; anything past the right edge is cut off */
+static void line(int row, const char *fmt, ...)
+{
+    char t[64];
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(t, sizeof t, fmt, ap);
+    va_end(ap);
+    memcpy(s_text[row], t, COLS);
+    s_text[row][COLS] = 0;
+}
+
+static void compose(uint32_t tick)
+{
+    node_stats_t ns; node_get_stats(&ns);
+    rtu_stats_t rs; rtu_get_stats(&rs);
+    uint32_t up = esp_timer_get_time() / 1000000LL;
+    char a[12], b[12];
+    memset(s_text, 0, sizeof s_text);
+
+    line(0, "%s", g_cfg.site[0] ? g_cfg.site : "(no site id)");
+    line(1, "%04X %.3fMHz r%u", g_cfg.e52_addr, e52_chan_mhz(g_cfg.e52_channel), g_cfg.e52_rate);
+
+    e52_route_t r;
+    if (!e52_route_to(ns.gw_addr, &r, 15000)) line(2, "GW %04X no route", ns.gw_addr);
+    else if (r.hop == ns.gw_addr) line(2, "GW %ddBm direct", r.rssi);
+    else line(2, "GW %ddBm via %04X", r.rssi, r.hop);
+
+    line(3, "RTU ok%lu to%lu ex%lu", (unsigned long)rs.ok, (unsigned long)rs.timeouts, (unsigned long)rs.exceptions);
+
+    fmt_dur(up, b, sizeof b);
+    if (ns.last_pub_s) { fmt_dur(up - ns.last_pub_s, a, sizeof a); line(4, "pub %s ago up %s", a, b); }
+    else line(4, "no pub yet up %s", b);
+
+    int n = node_value_count();
+    int pages = n > 6 ? (n + 5) / 6 : 1;
+    int base = (int)(tick / 5 % pages) * 6;   /* each page stays for 10 s */
+    for (int i = 0; i < 6 && base + i < n; i++) {
+        char cell[11];
+        node_value_text(base + i, cell, sizeof cell);
+        snprintf(s_text[5 + i / 2] + (i % 2) * 11, 11, "%-10s", cell);
+        if (i % 2) s_text[5 + i / 2][10] = ' ';      /* join the two cells */
+    }
+}
+
+static void display_task(void *arg)
+{
+    bool have = false;
+    for (uint32_t tick = 0;; tick++) {
+        if (!have) {
+            have = attach();
+            if (!have) {
+                char found[64] = ""; int fl = 0;
+                for (int a = 0x08; a < 0x78 && fl < (int)sizeof found - 6; a++)
+                    if (i2c_master_probe(s_bus, a, 20) == ESP_OK) fl += snprintf(found + fl, sizeof found - fl, " 0x%02X", a);
+                static bool told;
+                if (!told) ESP_LOGW(TAG, "no display at 0x3C/0x3D (SDA GPIO%d, SCL GPIO%d); bus scan:%s", g_cfg.oled_sda, g_cfg.oled_scl, fl ? found : " nothing answers");
+                told = true;                        /* say it once, keep probing quietly */
+                vTaskDelay(pdMS_TO_TICKS(5000));
+                continue;
+            }
+        }
+        compose(tick);
+        if (flush() != ESP_OK) {                     /* unplugged: drop it and probe again */
+            ESP_LOGW(TAG, "display not answering");
+            i2c_master_bus_rm_device(s_dev);
+            s_dev = NULL;
+            have = false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(2000));
+    }
+}
+
+void display_start(void)
+{
+    if (g_cfg.oled_sda < 0 || g_cfg.oled_scl < 0) return;
+    i2c_master_bus_config_t bc = {
+        .i2c_port = -1, .sda_io_num = g_cfg.oled_sda, .scl_io_num = g_cfg.oled_scl,
+        .clk_source = I2C_CLK_SRC_DEFAULT, .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,        /* modules carry their own; this covers bare panels */
+    };
+    if (i2c_new_master_bus(&bc, &s_bus) != ESP_OK) { ESP_LOGW(TAG, "I2C bus init failed"); return; }
+    xTaskCreate(display_task, "oled", 4096, NULL, 2, NULL);
+}

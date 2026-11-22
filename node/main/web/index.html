@@ -108,6 +108,7 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
    <div><label>AP password (≥8)</label><input id="ap_pass" type="password"></div>
    <div><label>Web password (user admin; blank = AP password)</label><input id="web_pass" type="password"></div>
    <div><label>Wi-Fi antenna</label><select id="ext_ant"><option value="false">On-board</option><option value="true">External (U.FL)</option></select></div>
+   <div><label>OLED display (SDA D9, SCL D10)</label><select id="oled_sh1106"><option value="true">SH1106 (1.3")</option><option value="false">SSD1306 (0.96")</option></select></div>
   </div>
   <button class="btn" onclick="save(netKeys)">Save (reboot to apply)</button>
   <button class="btn warn" onclick="reboot()">Reboot</button>
@@ -118,7 +119,7 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
 const $=id=>document.getElementById(id);
 const tabs=[['site','Site'],['poll','Poll list'],['rtu','RS-485 test'],['radio','Radio'],['set','Settings']];
 const radioKeys=['e52_channel','e52_rate','e52_power','e52_panid','e52_addr','e52_csma','gw_addr'];
-const siteKeys=['site','name'],rsKeys=['rs_baud','rs_parity','rs_stop','rtu_timeout_ms'],netKeys=['ap_ssid','ap_pass','web_pass','ext_ant'];
+const siteKeys=['site','name'],rsKeys=['rs_baud','rs_parity','rs_stop','rtu_timeout_ms'],netKeys=['ap_ssid','ap_pass','web_pass','ext_ant','oled_sh1106'];
 const TYPES=['u16','s16','u32','s32','f32','u32sw','s32sw','f32sw','bit'];
 let cfg={},cur='site';
 const api=(u,b)=>fetch(u,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
@@ -133,7 +134,7 @@ function status(){api('/api/status').then(s=>{
  $('hsite').textContent=s.site||'(no site ID set)';
  $('hid').textContent=(s.name?s.name+' · ':'')+'mesh '+s.addr+' · fw '+s.fw;
  $('hst').innerHTML=s.gw_seen>=0&&s.gw_seen<900?'<span class=ok>gateway '+s.gw+'</span>':'<span class=bad>gateway '+s.gw+' not heard</span>';
- const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),'Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
+ const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),'Link to gateway':s.gw_hop?(s.gw_hop==s.gw?'direct':'via '+s.gw_hop)+', '+s.gw_rssi+' dBm':'no route yet','Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
  'RTU ok / exceptions':s.rtu_ok+' / '+s.rtu_exc,'RTU timeouts / bad':s.rtu_timeout+' / '+s.rtu_crc,'Mesh Modbus reqs (dups)':s.mb_reqs+' ('+s.mb_dups+')',
  'Radio':s.freq+' MHz, rate '+s.rate,'LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'Free heap':s.heap};
  $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
@@ -142,7 +143,7 @@ function pollNow(){api('/api/poll',{}).then(()=>{$('pollmsg').textContent=' poll
 function pingGw(b){b.textContent='…';api('/api/ping',{}).then(r=>b.textContent=r.rtt<0?'no reply':'gateway '+r.rtt+' ms')}
 function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...siteKeys,...rsKeys,...netKeys,'poll_s'])if($(k))$(k).value=String(c[k]);
  $('e52_panid').value=hex(c.e52_panid);$('e52_addr').value=hex(c.e52_addr);$('gw_addr').value=hex(c.gw_addr);renderPoll()})}
-function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='ext_ant')v=v=='true';else if($(k).type=='number'||$(k).tagName=='SELECT'&&!isNaN(v))v=Number(v);o[k]=v});return o}
+function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='ext_ant'||k=='oled_sh1106')v=v=='true';else if($(k).type=='number'||$(k).tagName=='SELECT'&&!isNaN(v))v=Number(v);o[k]=v});return o}
 function save(keys){return api('/api/config',collect(keys)).then(r=>{alert(r.ok?r.note:'Save failed');loadCfg();status()})}
 function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving and programming E52…';
  api('/api/config',collect(radioKeys)).then(()=>api('/api/e52/apply',{})).then(r=>{$('e_out').textContent=(r.ok?'OK\n':'Some commands failed\n')+r.log;loadCfg()})}

@@ -39,7 +39,7 @@ static const char *TAG = "e52";
 #define RXBUF       2048
 #define TEXT_MAX    512
 
-static SemaphoreHandle_t s_tx_lock;
+static SemaphoreHandle_t s_tx_lock, s_route_lock;
 static MessageBufferHandle_t s_at_mb;
 static e52_rx_cb_t s_cb;
 static e52_stats_t s_st;
@@ -425,6 +425,7 @@ esp_err_t e52_init(e52_rx_cb_t cb)
 {
     s_cb = cb;
     s_tx_lock = xSemaphoreCreateMutex();
+    s_route_lock = xSemaphoreCreateMutex();
     s_at_mb = xMessageBufferCreate(TEXT_MAX + 8);
 
     /* not fatal: web UI stays up so pins/baud can be fixed */
@@ -455,4 +456,41 @@ esp_err_t e52_init(e52_rx_cb_t cb)
     if (e52_at("AT+SRC_ADDR=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "SRC_ADDR: %s", r);
     if (e52_at("AT+CHANNEL=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "CHANNEL: %s", r);
     return ESP_OK;
+}
+
+/* ---- route table (cached) ---- */
+static e52_route_t s_routes[E52_MAX_ROUTES];
+static int s_route_n;
+static int64_t s_routes_at_us = -1;
+
+int e52_routes(e52_route_t *out, int max, uint32_t max_age_ms)
+{
+    if (!s_route_lock) return 0;   /* before e52_init */
+    xSemaphoreTake(s_route_lock, portMAX_DELAY);
+    int64_t now = esp_timer_get_time();
+    if (s_routes_at_us < 0 || now - s_routes_at_us > (int64_t)max_age_ms * 1000) {
+        static char resp[TEXT_MAX];   /* under s_route_lock */
+        if (e52_at("AT+ROUTER_READ=?", resp, sizeof resp, 1500) == ESP_OK) {
+            int n = 0;
+            for (char *l = strtok(resp, "\r\n"); l && n < E52_MAX_ROUTES; l = strtok(NULL, "\r\n")) {
+                int no, dst, hop, sc, rssi;
+                if (sscanf(l, "%d %d %d %d %d", &no, &dst, &hop, &sc, &rssi) == 5)
+                    s_routes[n++] = (e52_route_t){ (uint16_t)dst, (uint16_t)hop, (int8_t)sc, (int16_t)rssi };
+            }
+            s_route_n = n;
+        }
+        s_routes_at_us = esp_timer_get_time();   /* also after a failure: don't hammer the module */
+    }
+    int n = s_route_n < max ? s_route_n : max;
+    if (out) memcpy(out, s_routes, n * sizeof *out);
+    xSemaphoreGive(s_route_lock);
+    return n;
+}
+
+bool e52_route_to(uint16_t dst, e52_route_t *r, uint32_t max_age_ms)
+{
+    e52_route_t t[E52_MAX_ROUTES];
+    int n = e52_routes(t, E52_MAX_ROUTES, max_age_ms);
+    for (int i = 0; i < n; i++) if (t[i].dst == dst) { if (r) *r = t[i]; return true; }
+    return false;
 }

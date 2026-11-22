@@ -17,6 +17,7 @@ static const char *TAG = "main";
 
 void wifi_start(void);
 void web_start(void);
+void display_start(void);
 
 /* program the E52 only when radio settings changed (writes module flash) */
 static uint32_t radio_hash(void)
@@ -61,6 +62,7 @@ void app_main(void)
     lmesh_init();
     node_start();
     web_start();
+    display_start();
 
     if (lmesh_start() == ESP_OK) {
         sync_radio_config();

@@ -35,6 +35,10 @@ typedef struct {
     char web_pass[65];       /* empty = ap_pass */
     bool ext_ant;            /* XIAO: use U.FL antenna for Wi-Fi */
 
+    /* optional I2C OLED status display */
+    int8_t oled_sda, oled_scl;   /* -1 = display off */
+    bool   oled_sh1106;          /* false = SSD1306 (0.96"), true = SH1106 (1.3") */
+
     /* E52 radio (field names shared with gateway: shared/e52.c uses them) */
     uint8_t  e52_channel;
     uint8_t  e52_rate;

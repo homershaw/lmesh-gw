@@ -141,6 +141,11 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddNumberToObject(o, "gw_seen", ns.gw_seen_s ? (double)(up - ns.gw_seen_s) : -1);
     snprintf(f, sizeof f, "%.3f", e52_chan_mhz(g_cfg.e52_channel)); cJSON_AddStringToObject(o, "freq", f);
     cJSON_AddNumberToObject(o, "rate", g_cfg.e52_rate);
+    e52_route_t rt;
+    if (e52_route_to(ns.gw_addr, &rt, 10000)) {
+        cJSON_AddNumberToObject(o, "gw_rssi", rt.rssi);
+        snprintf(h, sizeof h, "%04X", rt.hop); cJSON_AddStringToObject(o, "gw_hop", h);
+    }
     cJSON_AddNumberToObject(o, "tx", es.tx_frames);
     cJSON_AddNumberToObject(o, "rx", es.rx_frames);
     cJSON_AddNumberToObject(o, "tx_fail", es.tx_fail);

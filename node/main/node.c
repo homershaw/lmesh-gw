@@ -90,15 +90,18 @@ static void publish_status(void)
 {
     e52_stats_t es; e52_get_stats(&es);
     rtu_stats_t rs; rtu_get_stats(&rs);
-    char b[320];
+    char b[400], link[40] = "";
+    e52_route_t rt;                      /* our route to the gateway: next hop and its RSSI */
+    if (e52_route_to(s_gw, &rt, 5000))
+        snprintf(link, sizeof link, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
     xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
     snprintf(b, sizeof b,
              "{\"site\":\"%s\",\"name\":\"%s\",\"fw\":\"%s\",\"up\":%lu,\"addr\":\"%04X\","
              "\"rtu\":{\"ok\":%lu,\"exc\":%lu,\"timeout\":%lu,\"crc\":%lu},"
-             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu},\"pubs\":%lu}",
+             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu},\"pubs\":%lu%s}",
              g_cfg.site, g_cfg.name, NODE_FW_VERSION, (unsigned long)uptime_s(), g_cfg.e52_addr,
              (unsigned long)rs.ok, (unsigned long)rs.exceptions, (unsigned long)rs.timeouts, (unsigned long)rs.crc_err,
-             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)s_st.pubs);
+             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)s_st.pubs, link);
     xSemaphoreGive(g_cfg_lock);
     publish("status", b);
 }
@@ -381,6 +384,21 @@ static void on_announce(uint16_t src, const char *kind)
 /* ---------------- web helpers ---------------- */
 
 void node_get_stats(node_stats_t *s) { *s = s_st; s->gw_addr = s_gw; }
+
+int node_value_count(void) { return g_cfg.poll_n; }
+
+void node_value_text(int i, char *out, size_t n)
+{
+    out[0] = 0;
+    xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
+    if (i >= 0 && i < g_cfg.poll_n) {
+        const char *nm = g_cfg.poll[i].name;
+        if (!s_vals[i].at_s) snprintf(out, n, "%.6s -", nm);
+        else if (!s_vals[i].ok) snprintf(out, n, "%.6s ERR", nm);
+        else snprintf(out, n, "%.5s %.4g", nm, s_vals[i].v);
+    }
+    xSemaphoreGive(g_cfg_lock);
+}
 
 char *node_values_json(void)
 {

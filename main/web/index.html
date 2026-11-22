@@ -34,7 +34,7 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
  <div class="card"><h3>Mesh nodes</h3>
   <button class="btn" onclick="disc()">Discover (broadcast ping)</button><button class="btn sec" onclick="nodes()">Refresh</button>
   <span class="mu" id="discmsg"></span>
-  <table><thead><tr><th>Addr</th><th>IPv4</th><th>Type</th><th>Site</th><th>Name</th><th>Kind</th><th>Last seen</th><th>Pkts</th><th>RTT</th><th></th></tr></thead><tbody id="nt"></tbody></table>
+  <table><thead><tr><th>Addr</th><th>IPv4</th><th>Type</th><th>Site</th><th>Name</th><th>Kind</th><th>Last seen</th><th>Pkts</th><th>RTT</th><th>Link</th><th></th></tr></thead><tbody id="nt"></tbody></table>
  </div>
 </section>
 
@@ -144,7 +144,7 @@ function status(){api('/api/status').then(s=>{
  'Mesh IPv4':s.mesh_ip,'Frequency':s.freq+' MHz','LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'RX junk':s.rx_junk,
  'Modbus reqs / retries / timeouts':s.mb_reqs+' / '+s.mb_retries+' / '+s.mb_timeouts,'Modbus clients':s.mb_clients,'MQTT base':s.mqtt_base,'MQTT up / down':s.mqtt_up+' / '+s.mqtt_down};
  $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
-function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.site?(n.site_dup?'⚠ duplicate: ':'')+n.site:''}${n.kind=='rtu'?` <a href="#" title="Set site ID" onclick="return setSite(${n.addr_dec},'${n.site||''}')">✎</a>`:''}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td>
+function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.site?(n.site_dup?'⚠ duplicate: ':'')+n.site:''}${n.kind=='rtu'?` <a href="#" title="Set site ID" onclick="return setSite(${n.addr_dec},'${n.site||''}')">✎</a>`:''}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td><td>${n.hop?(n.hop==n.addr?'direct':'via '+n.hop)+' '+n.rssi+' dBm':'—'}</td>
  <td><button class="btn sec" style="margin:0" onclick="ping(${n.addr_dec},this)">Ping</button></td></tr>`).join('')||'<tr><td colspan=9 class=mu>No nodes heard yet</td></tr>'})}
 function setSite(a,cur){const s=prompt('Site / location ID for node '+hex(a)+' (e.g. LSD 01-02-034-05W5):',cur);if(s===null)return false;
  api('/api/node/config',{node:a,site:s.trim()}).then(r=>{alert(r.ok?'Node acknowledged. It saves the site ID and re-announces; refresh in a few seconds.':'No acknowledgement from the node (3 tries). Is it in range?');setTimeout(nodes,3000)});return false}

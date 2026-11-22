@@ -206,10 +206,18 @@ static esp_err_t h_nodes(httpd_req_t *r)
     static lmesh_node_t n[LMESH_MAX_NODES];   /* httpd is single-threaded */
     int cnt = lmesh_nodes(n, LMESH_MAX_NODES);
     uint32_t now = esp_timer_get_time() / 1000000LL;
+    static e52_route_t rt[E52_MAX_ROUTES];
+    int rn = e52_routes(rt, E52_MAX_ROUTES, 10000);
     cJSON *a = cJSON_CreateArray();
     for (int i = 0; i < cnt; i++) {
         cJSON *e = cJSON_CreateObject();
         char h[8], ip[20];
+        for (int k = 0; k < rn; k++) if (rt[k].dst == n[i].addr) {
+            snprintf(h, sizeof h, "%04X", rt[k].hop);
+            cJSON_AddStringToObject(e, "hop", h);            /* next hop; == addr when direct */
+            cJSON_AddNumberToObject(e, "rssi", rt[k].rssi);  /* of the next hop, dBm */
+            break;
+        }
         snprintf(h, sizeof h, "%04X", n[i].addr);
         lmesh_ip_str(n[i].addr, ip, sizeof ip);
         cJSON_AddStringToObject(e, "addr", h);
