@@ -45,6 +45,8 @@ static e52_rx_cb_t s_cb;
 static e52_stats_t s_st;
 static int32_t s_cur_dst = -1;      /* cached DST_ADDR */
 static int s_cur_opt = -1;          /* cached OPTION */
+#define RX_HOLDOFF_X 4              /* x airtime of a 28-byte frame: 14 / 40 / 128 ms at rate 0 / 1 / 2 */
+static volatile uint32_t s_rx_at_ms;   /* uptime of the last received frame */
 static int64_t s_tx_free_at_us;     /* pacing: earliest time next frame may go out */
 static volatile bool s_at_waiting;
 static volatile bool s_uart_ok;     /* link to module is usable (UART up, or USB device open) */
@@ -238,6 +240,7 @@ static void rx_task(void *arg)
                 if (dpos == fr.len) {
                     s_st.rx_frames++;
                     s_st.rx_bytes += fr.len;
+                    s_rx_at_ms = (uint32_t)(esp_timer_get_time() / 1000);
                     if (s_cb) s_cb(&fr);
                     st = S_IDLE;
                 }
@@ -292,10 +295,23 @@ esp_err_t e52_at(const char *cmd, char *resp, size_t rl, int timeout_ms)
     return e;
 }
 
+/* After a frame comes in, both radios are still busy for a moment: ours sends
+ * the MAC ack, the sender waits for it. A reply written to the module inside
+ * that window is lost. At 62.5k and 21.9k the window is shorter than our own
+ * turnaround; at 7k it is not (measured: 37 % of pings and 23 % of Modbus
+ * reads lost at rate 2 without this). Scales with the airtime of a short frame. */
+static uint32_t rx_holdoff_ms(void)
+{
+    static const uint32_t bps[] = {62500, 21875, 7000};
+    return (28u * 8u * 1000u) / bps[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate] * RX_HOLDOFF_X;
+}
+
 static void pace_wait(void)
 {
     int64_t now = esp_timer_get_time();
     if (now < s_tx_free_at_us) vTaskDelay(pdMS_TO_TICKS((s_tx_free_at_us - now) / 1000 + 1));
+    uint32_t since = (uint32_t)(esp_timer_get_time() / 1000) - s_rx_at_ms, hold = rx_holdoff_ms();
+    if (s_rx_at_ms && since < hold) vTaskDelay(pdMS_TO_TICKS(hold - since + 1));
 }
 
 esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len)
@@ -456,6 +472,7 @@ esp_err_t e52_init(e52_rx_cb_t cb)
     e52_runtime_setup();
     if (e52_at("AT+SRC_ADDR=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "SRC_ADDR: %s", r);
     if (e52_at("AT+CHANNEL=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "CHANNEL: %s", r);
+    if (e52_at("AT+RATE=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "RATE: %s (config says %u)", r, g_cfg.e52_rate);
     return ESP_OK;
 }
 
