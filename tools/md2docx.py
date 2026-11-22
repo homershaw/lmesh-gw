@@ -1,7 +1,11 @@
-"""Turn the project's Markdown documents into Word files for printing and sharing.
+"""Turn the project's Markdown documents into PDF and Word files for printing and sharing.
 
     pip install python-docx pillow
-    python tools/md2docx.py            # writes docs/*.docx
+    python tools/md2docx.py            # writes docs/*.docx and docs/*.pdf
+
+The PDF is the copy to hand out: fonts are embedded, so it looks the same on
+every machine. It is made from the Word file by ONLYOFFICE's converter (x2t),
+so that step runs only where ONLYOFFICE Desktop Editors is installed (Windows).
 
 Handles what these documents use: headings, paragraphs, nested bullets,
 numbered lists, tables, code blocks, bold, inline code and links. The two
@@ -12,7 +16,9 @@ import io
 import os
 import re
 import shutil
+import subprocess
 import sys
+import tempfile
 import zipfile
 
 from docx import Document
@@ -440,7 +446,33 @@ def convert(src, dst, title):
     return out
 
 
+X2T = r'C:\Program Files\ONLYOFFICE\DesktopEditors\converter\x2t.exe'
+
+
+def to_pdf(docx):
+    """Word -> PDF through ONLYOFFICE's x2t. Returns the PDF path, or None if x2t is not available."""
+    fonts = os.path.join(os.environ.get('LOCALAPPDATA', ''), 'ONLYOFFICE', 'DesktopEditors', 'data', 'fonts')
+    if not os.path.exists(X2T) or not os.path.exists(os.path.join(fonts, 'AllFonts.js')):
+        return None
+    pdf = os.path.splitext(docx)[0] + '.pdf'
+    with tempfile.TemporaryDirectory() as tmp:
+        job = os.path.join(tmp, 'job.xml')
+        work = os.path.join(tmp, 'work')
+        os.mkdir(work)
+        open(job, 'w', encoding='utf-8').write(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<TaskQueueDataConvert xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">'
+            '<m_sFileFrom>%s</m_sFileFrom><m_sFileTo>%s</m_sFileTo><m_nFormatTo>513</m_nFormatTo>'
+            '<m_sFontDir>%s</m_sFontDir><m_sAllFontsPath>%s</m_sAllFontsPath><m_sTempDir>%s</m_sTempDir>'
+            '</TaskQueueDataConvert>' % (os.path.abspath(docx), os.path.abspath(pdf), fonts, os.path.join(fonts, 'AllFonts.js'), work))
+        done = subprocess.run([X2T, job], capture_output=True)
+    return pdf if done.returncode == 0 and os.path.exists(pdf) else None
+
+
 if __name__ == '__main__':
     for src, dst, title in DOCS:
         if os.path.exists(os.path.join(ROOT, src)):
-            print('wrote', convert(src, dst, title))
+            out = convert(src, dst, title)
+            print('wrote', out)
+            pdf = to_pdf(out)
+            print('wrote', pdf) if pdf else print('  (no PDF: ONLYOFFICE converter not found on this machine)')
