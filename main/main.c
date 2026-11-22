@@ -9,12 +9,19 @@
 #include "config.h"
 #include "lmesh.h"
 #include "e52.h"
+#include "ota.h"
 #include "modbus_gw.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_log.h"
 
 static const char *TAG = "main";
+
+bool web_seen(void);
+void nodefw_init(void);
+/* A new gateway firmware is kept once somebody reaches its web page: that is
+ * the path the next update would have to come in by. */
+static bool ota_ok(void) { return web_seen(); }
 
 static uint32_t radio_hash(void)
 {
@@ -65,5 +72,7 @@ void app_main(void)
     if (lmesh_start() == ESP_OK) sync_radio_config();
     else ESP_LOGE(TAG, "E52 not responding - web UI still available for pin/baud config");
 
+    nodefw_init();
+    ota_watch(ota_ok, 600);
     ESP_LOGI(TAG, "LMESH gateway %s up, id %s", GW_FW_VERSION, g_gw_id);
 }

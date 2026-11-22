@@ -41,6 +41,10 @@ typedef struct {
     /* Modbus */
     uint16_t mb_port;
     uint16_t mb_timeout_ms;
+
+    /* range survey */
+    double gw_lat, gw_lon;   /* gateway position, degrees; 0,0 = not set */
+    float  ant_gain_db;      /* gain of both antennas together, for the path-loss figure */
     uint8_t  mb_map_n;
     mb_map_t mb_map[MB_MAP_MAX];
 } gw_cfg_t;

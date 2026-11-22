@@ -19,6 +19,7 @@ static SemaphoreHandle_t s_lock;
 static rtu_stats_t s_st;
 static int64_t s_idle_at_us;     /* bus free after the 3.5-char gap */
 static uint32_t s_char_us;
+static bool s_off;               /* survey build: the UART belongs to the GPS, there is no RTU */
 
 static uint16_t crc16(const uint8_t *p, int n)
 {
@@ -33,6 +34,7 @@ static uint16_t crc16(const uint8_t *p, int n)
 esp_err_t rtu_init(void)
 {
     s_lock = xSemaphoreCreateMutex();
+    if (g_cfg.gps) { s_off = true; ESP_LOGI(TAG, "RS-485 off: GPS survey unit"); return ESP_OK; }
     uart_config_t u = {
         .baud_rate = (int)g_cfg.rs_baud,
         .data_bits = UART_DATA_8_BITS,
@@ -55,6 +57,7 @@ esp_err_t rtu_init(void)
 int rtu_txn(uint8_t unit, const uint8_t *pdu, int pl, uint8_t *rsp, int rmax, int timeout_ms)
 {
     if (pl < 1 || pl > 252) return RTU_ERR_BAD;
+    if (s_off) return RTU_ERR_TIMEOUT;
     uint8_t f[256];
     f[0] = unit;
     memcpy(f + 1, pdu, pl);

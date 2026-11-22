@@ -4,6 +4,9 @@
 #include "gw.h"
 #include "config.h"
 #include "e52.h"
+#include "ota.h"
+
+static volatile bool s_web_seen;     /* someone logged in since boot: proof the gateway is reachable */
 #include "lmesh.h"
 #include "modbus_gw.h"
 #include "esp_http_server.h"
@@ -123,6 +126,12 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddStringToObject(o, "sta_ip", sta);
     cJSON_AddStringToObject(o, "ap_ip", ap);
     cJSON_AddNumberToObject(o, "rssi", rssi);
+    cJSON_AddStringToObject(o, "slot", ota_slot());
+    cJSON_AddBoolToObject(o, "ota_trial", ota_pending());
+    cJSON_AddNumberToObject(o, "ota_left", ota_trial_left_s());
+    { e52_stats_t bs; e52_get_stats(&bs);
+      cJSON_AddNumberToObject(o, "back_ok", bs.back_ok); cJSON_AddNumberToObject(o, "back_noack", bs.back_noack); cJSON_AddNumberToObject(o, "back_noroute", bs.back_noroute);
+      cJSON_AddNumberToObject(o, "resends", bs.resends); cJSON_AddNumberToObject(o, "resend_giveup", bs.resend_giveup); }
     cJSON_AddBoolToObject(o, "mqtt", mqtt_gw_connected());
     cJSON_AddStringToObject(o, "mqtt_base", mqtt_gw_base());
     cJSON_AddNumberToObject(o, "mqtt_up", up);
@@ -206,10 +215,18 @@ static esp_err_t h_nodes(httpd_req_t *r)
     static lmesh_node_t n[LMESH_MAX_NODES];   /* httpd is single-threaded */
     int cnt = lmesh_nodes(n, LMESH_MAX_NODES);
     uint32_t now = esp_timer_get_time() / 1000000LL;
+    static e52_route_t rt[E52_MAX_ROUTES];
+    int rn = e52_routes(rt, E52_MAX_ROUTES, 10000);
     cJSON *a = cJSON_CreateArray();
     for (int i = 0; i < cnt; i++) {
         cJSON *e = cJSON_CreateObject();
         char h[8], ip[20];
+        for (int k = 0; k < rn; k++) if (rt[k].dst == n[i].addr) {
+            snprintf(h, sizeof h, "%04X", rt[k].hop);
+            cJSON_AddStringToObject(e, "hop", h);            /* next hop; == addr when direct */
+            cJSON_AddNumberToObject(e, "rssi", rt[k].rssi);  /* of the next hop, dBm */
+            break;
+        }
         snprintf(h, sizeof h, "%04X", n[i].addr);
         lmesh_ip_str(n[i].addr, ip, sizeof ip);
         cJSON_AddStringToObject(e, "addr", h);
@@ -368,7 +385,94 @@ static void async_worker(void *arg)
 static esp_err_t h_sync(httpd_req_t *r)
 {
     if (!auth_ok(r)) return ESP_OK;
+    s_web_seen = true;
     return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
+}
+
+char *survey_dump(bool csv);
+void survey_clear(void);
+
+/* GET /api/survey: points as JSON. GET /api/survey.csv: the same as a file. POST: clear. */
+static esp_err_t h_survey(httpd_req_t *r)
+{
+    if (r->method == HTTP_POST) { survey_clear(); return httpd_resp_sendstr(r, "{\"ok\":true}"); }
+    bool csv = strstr(r->uri, ".csv") != NULL;
+    char *s = survey_dump(csv);
+    if (!s) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    httpd_resp_set_type(r, csv ? "text/csv" : "application/json");
+    if (csv) httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"lmesh-survey.csv\"");
+    esp_err_t e = httpd_resp_sendstr(r, s);
+    free(s);
+    return e;
+}
+
+const char *meshrate_start(int rate, bool force);
+int meshrate_status(const char **log);
+
+/* POST {"rate":2[,"force":true]} starts a mesh-wide rate change; GET reports progress */
+static esp_err_t h_meshrate(httpd_req_t *r)
+{
+    cJSON *o = cJSON_CreateObject();
+    if (r->method == HTTP_POST) {
+        cJSON *in = read_json(r);
+        cJSON *f = in ? cJSON_GetObjectItem(in, "force") : NULL;
+        const char *err = in ? meshrate_start(jint(in, "rate", -1), cJSON_IsTrue(f)) : "bad json";
+        cJSON_Delete(in);
+        if (err) cJSON_AddStringToObject(o, "err", err);
+    }
+    const char *log;
+    int st = meshrate_status(&log);
+    cJSON_AddNumberToObject(o, "state", st);
+    cJSON_AddNumberToObject(o, "rate", g_cfg.e52_rate);
+    cJSON_AddStringToObject(o, "log", log);
+    return send_json(r, o);
+}
+
+/* ---- firmware update ---- */
+bool web_seen(void) { return s_web_seen; }
+
+void nodefw_invalidate(void);
+esp_err_t nodefw_http_upload(httpd_req_t *r);
+const char *nodefw_send(int node);
+void nodefw_cancel(void);
+void nodefw_status(int *state, uint32_t *size, uint32_t *sent, uint32_t *secs, uint16_t *node, const char **ver, const char **log);
+
+/* the gateway's own update reuses the slot that holds the node image */
+static esp_err_t h_ota(httpd_req_t *r) { nodefw_invalidate(); return ota_http_upload(r); }
+
+static esp_err_t h_nodefw_upload(httpd_req_t *r) { return nodefw_http_upload(r); }
+
+/* GET: image held + transfer progress. POST {"node":8881} starts, {"cancel":true} stops. */
+static esp_err_t h_nodefw(httpd_req_t *r)
+{
+    cJSON *o = cJSON_CreateObject();
+    if (r->method == HTTP_POST) {
+        cJSON *in = read_json(r);
+        if (in && cJSON_IsTrue(cJSON_GetObjectItem(in, "cancel"))) nodefw_cancel();
+        else {
+            const char *err = in ? nodefw_send(jint(in, "node", -1)) : "bad json";
+            if (err) cJSON_AddStringToObject(o, "err", err);
+        }
+        cJSON_Delete(in);
+    }
+    int st; uint32_t size, sent, secs; uint16_t node; const char *ver, *log;
+    nodefw_status(&st, &size, &sent, &secs, &node, &ver, &log);
+    char h[8];
+    snprintf(h, sizeof h, "%04X", node);
+    cJSON_AddNumberToObject(o, "state", st);
+    cJSON_AddNumberToObject(o, "size", size);
+    cJSON_AddStringToObject(o, "ver", ver);
+    cJSON_AddStringToObject(o, "node", h);
+    cJSON_AddNumberToObject(o, "sent", sent);
+    cJSON_AddNumberToObject(o, "secs", secs);
+    cJSON_AddStringToObject(o, "log", log);
+    return send_json(r, o);
+}
+
+static esp_err_t h_ota_confirm(httpd_req_t *r)
+{
+    ota_confirm();
+    return httpd_resp_sendstr(r, "{\"ok\":true}");
 }
 
 static esp_err_t h_async(httpd_req_t *r)
@@ -417,6 +521,16 @@ void web_start(void)
         { .uri = "/api/node/config", .method = HTTP_POST, .handler = h_async, .user_ctx = h_node_cfg },
         { .uri = "/api/discover", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_discover },
         { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_async, .user_ctx = h_modbus },
+        { .uri = "/api/mesh/rate", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_meshrate },
+        { .uri = "/api/mesh/rate", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_meshrate },
+        { .uri = "/api/ota", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota },
+        { .uri = "/api/ota/confirm", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota_confirm },
+        { .uri = "/api/nodefw/upload", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw_upload },
+        { .uri = "/api/nodefw", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_nodefw },
+        { .uri = "/api/nodefw", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_nodefw },
+        { .uri = "/api/survey", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_survey },
+        { .uri = "/api/survey.csv", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_survey },
+        { .uri = "/api/survey", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_survey },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);

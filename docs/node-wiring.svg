@@ -85,14 +85,13 @@
   <!-- ================= E52 ================= -->
   <rect class="mod" x="170" y="290" width="160" height="190" rx="6"/>
   <text x="250" y="282" text-anchor="middle" class="t h">Ebyte E52-900NW22S</text>
-  <text x="250" y="458" text-anchor="middle" class="m">mesh router 0x0002–0x7FFF</text>
-  <text x="250" y="472" text-anchor="middle" class="m">915.125 MHz · 21.875k · PAN 0x1234</text>
+  <text x="250" y="474" text-anchor="middle" class="m">router · 915.125 MHz · 21.875k</text>
   <g class="pin"><circle cx="330" cy="320" r="3"/><circle cx="330" cy="360" r="3"/><circle cx="330" cy="400" r="3"/><circle cx="330" cy="425" r="3"/><circle cx="330" cy="445" r="3"/><circle cx="170" cy="330" r="3"/></g>
   <text x="322" y="324" text-anchor="end" class="t">RXD (pin 10)</text>
   <text x="322" y="364" text-anchor="end" class="t">TXD (pin 9)</text>
   <text x="322" y="404" text-anchor="end" class="t">NRST (pin 17)</text>
-  <text x="322" y="429" text-anchor="end" class="t">VCC</text>
-  <text x="322" y="449" text-anchor="end" class="t">GND</text>
+  <text x="322" y="429" text-anchor="end" class="t">VDD (pin 28)</text>
+  <text x="322" y="449" text-anchor="end" class="t">GND (13/15/27)</text>
   <text x="178" y="334" class="t">ANT</text>
   <!-- antenna -->
   <polyline class="w" points="170,330 110,330 110,300"/>
@@ -144,6 +143,6 @@
   <line class="wd" x1="710" y1="660" x2="750" y2="660"/><text x="756" y="664" class="t">optional</text>
   <line class="pwr" x1="600" y1="684" x2="640" y2="684"/><text x="646" y="688" class="r">supply</text>
   <line class="gnd" x1="710" y1="684" x2="750" y2="684"/><text x="756" y="688" class="g">ground</text>
-  <text x="600" y="716" class="m">E52 pin numbers 9/10/17 per module datasheet;</text>
-  <text x="600" y="730" class="m">check VCC/GND pad numbers there before layout.</text>
+  <text x="600" y="716" class="m">E52 pins per Ebyte manual v1.4 (p.6).</text>
+  <text x="600" y="730" class="m">Radio circuit detail: e52-radio-schematic.svg</text>
 </svg>

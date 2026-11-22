@@ -35,6 +35,8 @@ void cfg_defaults(gw_cfg_t *c)
     c->uart_baud = CONFIG_LMGW_E52_BAUD;
     c->mb_port = 502;
     c->mb_timeout_ms = 6000;
+    c->gw_lat = 0; c->gw_lon = 0;
+    c->ant_gain_db = 4.0f;          /* two ~2 dBi whips */
     c->mb_map_n = 0;
 }
 
@@ -92,6 +94,9 @@ bool cfg_from_json(const char *json)
     JN("uart_baud", uart_baud, 1200, 460800);
     JN("mb_port", mb_port, 1, 65535);
     JN("mb_timeout_ms", mb_timeout_ms, 500, 60000);
+    JN("gw_lat", gw_lat, -90, 90);
+    JN("gw_lon", gw_lon, -180, 180);
+    JN("ant_gain_db", ant_gain_db, -20, 40);
 
     cJSON *m = cJSON_GetObjectItem(o, "mb_map");
     if (cJSON_IsArray(m)) {
@@ -140,6 +145,9 @@ char *cfg_to_json(bool secrets)
     cJSON_AddNumberToObject(o, "uart_baud", c->uart_baud);
     cJSON_AddNumberToObject(o, "mb_port", c->mb_port);
     cJSON_AddNumberToObject(o, "mb_timeout_ms", c->mb_timeout_ms);
+    cJSON_AddNumberToObject(o, "gw_lat", c->gw_lat);
+    cJSON_AddNumberToObject(o, "gw_lon", c->gw_lon);
+    cJSON_AddNumberToObject(o, "ant_gain_db", c->ant_gain_db);
     cJSON *m = cJSON_AddArrayToObject(o, "mb_map");
     for (int i = 0; i < c->mb_map_n; i++) {
         cJSON *e = cJSON_CreateObject();

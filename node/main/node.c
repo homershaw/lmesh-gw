@@ -15,6 +15,7 @@
 #include "node.h"
 #include "config.h"
 #include "rtu.h"
+#include "gps.h"
 #include "lmesh.h"
 #include "e52.h"
 #include "cJSON.h"
@@ -32,6 +33,19 @@ static const char *TAG = "node";
 #define PUB_CHUNK      560          /* split data JSON so one message stays <= 3 radio frames */
 #define NOTE_POLL      (1u << 0)
 #define NOTE_ANNOUNCE  (1u << 1)
+#define NOTE_WAKE      (1u << 2)
+
+/* Trial change of the air rate, ordered by the gateway ("radio" downlink).
+ * The new rate is kept only if the gateway is heard on it within TRIAL_S;
+ * otherwise the node goes back, so a failed change cannot strand it.
+ * The config is saved only after that proof. If the node resets mid-trial,
+ * boot sees module rate != config and reprograms the old rate. */
+#define TRIAL_S        180      /* must match the gateway (meshrate.c) */
+static struct {
+    volatile uint8_t state;     /* 0 none, 1 scheduled, 2 on trial */
+    uint8_t new_rate, old_rate;
+    uint32_t at_s, switched_s, deadline_s, next_ann_s;
+} s_trial;
 
 static node_stats_t s_st;
 static TaskHandle_t s_poll_task;
@@ -90,15 +104,18 @@ static void publish_status(void)
 {
     e52_stats_t es; e52_get_stats(&es);
     rtu_stats_t rs; rtu_get_stats(&rs);
-    char b[320];
+    char b[440], link[40] = "";
+    e52_route_t rt;                      /* our route to the gateway: next hop and its RSSI */
+    if (e52_route_to(s_gw, &rt, 5000))
+        snprintf(link, sizeof link, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
     xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
     snprintf(b, sizeof b,
              "{\"site\":\"%s\",\"name\":\"%s\",\"fw\":\"%s\",\"up\":%lu,\"addr\":\"%04X\","
              "\"rtu\":{\"ok\":%lu,\"exc\":%lu,\"timeout\":%lu,\"crc\":%lu},"
-             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu},\"pubs\":%lu}",
+             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu,\"noack\":%lu,\"resend\":%lu},\"pubs\":%lu%s}",
              g_cfg.site, g_cfg.name, NODE_FW_VERSION, (unsigned long)uptime_s(), g_cfg.e52_addr,
              (unsigned long)rs.ok, (unsigned long)rs.exceptions, (unsigned long)rs.timeouts, (unsigned long)rs.crc_err,
-             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)s_st.pubs);
+             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)es.back_noack, (unsigned long)es.resends, (unsigned long)s_st.pubs, link);
     xSemaphoreGive(g_cfg_lock);
     publish("status", b);
 }
@@ -177,15 +194,71 @@ static void poll_once(void)
     free(b);
 }
 
+/* Survey unit: one position report with the link as seen right now. Kept
+ * under one radio frame. "n" counts reports, so gaps show what was lost;
+ * "rtt" is a ping to the gateway taken for this report (-1 = no answer). */
+static void publish_pos(void)
+{
+    static uint16_t n;
+    gps_fix_t g;
+    bool alive = gps_get(&g);
+    int32_t rtt = lmesh_ping(s_gw, 4000);
+    e52_route_t rt;
+    bool have = e52_route_to(s_gw, &rt, 1000);
+    char b[200];
+    int l = snprintf(b, sizeof b, "{\"n\":%u,\"fix\":%d", ++n, g.fix ? 1 : 0);
+    if (g.fix) l += snprintf(b + l, sizeof b - l, ",\"lat\":%.6f,\"lon\":%.6f,\"alt\":%.0f,\"hdop\":%.1f,\"spd\":%.1f", g.lat, g.lon, g.alt, g.hdop, g.spd_kmh);
+    l += snprintf(b + l, sizeof b - l, ",\"sats\":%u", g.sats);
+    if (g.utc[0]) l += snprintf(b + l, sizeof b - l, ",\"utc\":\"%s\"", g.utc);
+    if (have) l += snprintf(b + l, sizeof b - l, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
+    l += snprintf(b + l, sizeof b - l, ",\"rtt\":%ld%s}", (long)rtt, alive ? "" : ",\"gps\":\"silent\"");
+    publish("pos", b);
+}
+
+static void trial_step(uint32_t now)
+{
+    if (s_trial.state == 1 && now >= s_trial.at_s) {
+        s_trial.old_rate = g_cfg.e52_rate;
+        g_cfg.e52_rate = s_trial.new_rate;
+        ESP_LOGW(TAG, "air rate %u -> %u on trial", s_trial.old_rate, s_trial.new_rate);
+        e52_apply_config(NULL, 0);
+        s_trial.switched_s = uptime_s();
+        s_trial.deadline_s = s_trial.switched_s + TRIAL_S;
+        s_trial.next_ann_s = s_trial.switched_s + 3;
+        s_trial.state = 2;
+    } else if (s_trial.state == 2) {
+        if (lmesh_last_seen(s_gw) > s_trial.switched_s) {
+            s_trial.state = 0;
+            bool saved = cfg_save();
+            ESP_LOGW(TAG, "gateway heard at rate %u: keeping it%s", g_cfg.e52_rate, saved ? "" : " (SAVE FAILED)");
+            publish_status();
+        } else if (now >= s_trial.deadline_s) {
+            ESP_LOGW(TAG, "gateway not heard at rate %u: back to rate %u", g_cfg.e52_rate, s_trial.old_rate);
+            g_cfg.e52_rate = s_trial.old_rate;
+            e52_apply_config(NULL, 0);
+            s_trial.state = 0;
+            lmesh_announce(s_gw);
+        } else if (now >= s_trial.next_ann_s) {
+            lmesh_announce(s_gw);                       /* lets the gateway find us sooner */
+            s_trial.next_ann_s = now + 20;
+        }
+    }
+}
+
 static void poll_task(void *a)
 {
+    uint32_t next_pos = uptime_s() + 8;
     uint32_t next_poll = uptime_s() + 5, next_ann = uptime_s() + REANNOUNCE_S, next_status = uptime_s() + 20;
     for (;;) {
         uint32_t now = uptime_s(), wake = next_ann < next_status ? next_ann : next_status;
         uint16_t ps = g_cfg.poll_s;
         if (ps && next_poll < wake) wake = next_poll;
+        if (s_trial.state && wake > now + 2) wake = now + 2;
+        if (g_cfg.gps && next_pos < wake) wake = next_pos;
         uint32_t note = 0;
         xTaskNotifyWait(0, UINT32_MAX, &note, pdMS_TO_TICKS(wake > now ? (wake - now) * 1000 : 0));
+        now = uptime_s();
+        trial_step(now);
         now = uptime_s();
         if (note & NOTE_ANNOUNCE) {
             vTaskDelay(pdMS_TO_TICKS(200 + esp_random() % 2000));   /* don't all answer at once */
@@ -195,7 +268,10 @@ static void poll_task(void *a)
         }
         if (now >= next_ann) { set_identity(); lmesh_announce(s_gw); next_ann = now + REANNOUNCE_S; }
         if (now >= next_status) { publish_status(); next_status = now + STATUS_S; }
-        if ((note & NOTE_POLL) || (ps && now >= next_poll)) {
+        if (g_cfg.gps) {                               /* survey unit: positions instead of RTU polls */
+            if (now >= next_pos) { publish_pos(); next_pos = uptime_s() + g_cfg.pos_s; }
+            next_poll = now + 3600;
+        } else if ((note & NOTE_POLL) || (ps && now >= next_poll)) {
             poll_once();
             next_poll = uptime_s() + (ps ? ps : 3600);
         }
@@ -308,6 +384,34 @@ static void do_config(const char *json)
     publish("config/ack", b);
 }
 
+/* "radio" {"rate":2,"in_s":30} or {"cancel":true}, from the gateway's mesh-rate change */
+static void do_radio(const char *json)
+{
+    cJSON *o = cJSON_Parse(json);
+    cJSON *r = o ? cJSON_GetObjectItem(o, "rate") : NULL, *in = o ? cJSON_GetObjectItem(o, "in_s") : NULL;
+    const char *err = NULL;
+    if (o && cJSON_IsTrue(cJSON_GetObjectItem(o, "cancel"))) {
+        if (s_trial.state == 1) s_trial.state = 0;
+    } else if (!cJSON_IsNumber(r) || r->valueint < 0 || r->valueint > 2) err = "bad rate";
+    else if (s_trial.state == 2) err = "trial running";
+    else if (r->valueint == g_cfg.e52_rate) s_trial.state = 0;
+    else {
+        int d = cJSON_IsNumber(in) ? in->valueint : 20;
+        if (d < 3) d = 3;
+        if (d > 900) d = 900;
+        s_trial.state = 0;
+        s_trial.new_rate = (uint8_t)r->valueint;
+        s_trial.at_s = uptime_s() + d;
+        s_trial.state = 1;
+        ESP_LOGW(TAG, "air rate change to %u in %d s", s_trial.new_rate, d);
+        if (s_poll_task) xTaskNotify(s_poll_task, NOTE_WAKE, eSetBits);
+    }
+    cJSON_Delete(o);
+    char b[80];
+    snprintf(b, sizeof b, "{\"ok\":%s%s%s%s}", err ? "false" : "true", err ? ",\"err\":\"" : "", err ? err : "", err ? "\"" : "");
+    publish("radio/ack", b);
+}
+
 static void do_downlink(const work_t *w)
 {
     const uint8_t *z = memchr(w->data, 0, w->len);
@@ -322,6 +426,7 @@ static void do_downlink(const work_t *w)
     else if (!strcmp(sub, "poll")) node_poll_now();
     else if (!strcmp(sub, "status")) publish_status();
     else if (!strcmp(sub, "config")) do_config(payload);
+    else if (!strcmp(sub, "radio")) do_radio(payload);
     else ESP_LOGW(TAG, "unknown downlink '%s'", sub);
 }
 
@@ -381,6 +486,21 @@ static void on_announce(uint16_t src, const char *kind)
 /* ---------------- web helpers ---------------- */
 
 void node_get_stats(node_stats_t *s) { *s = s_st; s->gw_addr = s_gw; }
+
+int node_value_count(void) { return g_cfg.poll_n; }
+
+void node_value_text(int i, char *out, size_t n)
+{
+    out[0] = 0;
+    xSemaphoreTake(g_cfg_lock, portMAX_DELAY);
+    if (i >= 0 && i < g_cfg.poll_n) {
+        const char *nm = g_cfg.poll[i].name;
+        if (!s_vals[i].at_s) snprintf(out, n, "%.6s -", nm);
+        else if (!s_vals[i].ok) snprintf(out, n, "%.6s ERR", nm);
+        else snprintf(out, n, "%.5s %.4g", nm, s_vals[i].v);
+    }
+    xSemaphoreGive(g_cfg_lock);
+}
 
 char *node_values_json(void)
 {

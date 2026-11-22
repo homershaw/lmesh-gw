@@ -20,6 +20,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/semphr.h"
+#include "freertos/queue.h"
 #include "freertos/message_buffer.h"
 #include "driver/uart.h"
 #include "driver/gpio.h"
@@ -39,12 +40,14 @@ static const char *TAG = "e52";
 #define RXBUF       2048
 #define TEXT_MAX    512
 
-static SemaphoreHandle_t s_tx_lock;
+static SemaphoreHandle_t s_tx_lock, s_route_lock;
 static MessageBufferHandle_t s_at_mb;
 static e52_rx_cb_t s_cb;
 static e52_stats_t s_st;
 static int32_t s_cur_dst = -1;      /* cached DST_ADDR */
 static int s_cur_opt = -1;          /* cached OPTION */
+#define RX_HOLDOFF_X 4              /* x airtime of a 28-byte frame: 14 / 40 / 128 ms at rate 0 / 1 / 2 */
+static volatile uint32_t s_rx_at_ms;   /* uptime of the last received frame */
 static int64_t s_tx_free_at_us;     /* pacing: earliest time next frame may go out */
 static volatile bool s_at_waiting;
 static volatile bool s_uart_ok;     /* link to module is usable (UART up, or USB device open) */
@@ -186,6 +189,70 @@ uint32_t e52_airtime_ms(size_t len)
 
 /* ---------------- RX ---------------- */
 
+/* ---- delivery reports and automatic resend ----
+ * With AT+BACK=1 the module answers every unicast frame with a text line:
+ * SUCCESS, NO ACK or NO ROUTE. Frames wait in a small FIFO until their
+ * report arrives; a frame that was not acknowledged is sent again at once
+ * (up to RESEND_MAX times) instead of waiting for an application timeout.
+ * Receivers already ignore duplicates (Modbus and downlinks by seq). */
+#define RESEND_MAX   0       /* off: the module retries by itself, and NO ACK usually means the ack was
+                              * missed, not the frame; resending then collides with the peer's reply
+                              * (measured at 7k: Modbus retries 9/50 -> 23/50 with resend on) */
+#define PEND_N       4
+#define PEND_AGE_US  5000000LL
+typedef struct { uint16_t dst; uint8_t len, tries; int64_t at_us; uint8_t data[E52_MAX_PAYLOAD]; } pend_t;
+static pend_t s_pend[PEND_N];
+static int s_pend_head, s_pend_n;
+static SemaphoreHandle_t s_pend_lock;
+static QueueHandle_t s_resend_q;
+
+static void pend_push(uint16_t dst, const uint8_t *data, size_t len, uint8_t tries)
+{
+    xSemaphoreTake(s_pend_lock, portMAX_DELAY);
+    if (s_pend_n == PEND_N) { s_pend_head = (s_pend_head + 1) % PEND_N; s_pend_n--; }   /* report never came */
+    pend_t *e = &s_pend[(s_pend_head + s_pend_n++) % PEND_N];
+    e->dst = dst; e->len = (uint8_t)len; e->tries = tries; e->at_us = esp_timer_get_time();
+    memcpy(e->data, data, len);
+    xSemaphoreGive(s_pend_lock);
+}
+
+/* rx task: the oldest waiting frame got its report */
+static void on_report(bool delivered)
+{
+    static pend_t e;
+    bool have = false;
+    int64_t now = esp_timer_get_time();
+    xSemaphoreTake(s_pend_lock, portMAX_DELAY);
+    while (s_pend_n && now - s_pend[s_pend_head].at_us > PEND_AGE_US) { s_pend_head = (s_pend_head + 1) % PEND_N; s_pend_n--; }
+    if (s_pend_n) { e = s_pend[s_pend_head]; s_pend_head = (s_pend_head + 1) % PEND_N; s_pend_n--; have = true; }
+    xSemaphoreGive(s_pend_lock);
+    if (!have || delivered) return;
+    if ((int)e.tries + 1 > RESEND_MAX) { s_st.resend_giveup++; return; }
+    e.tries++;
+    if (xQueueSend(s_resend_q, &e, 0) != pdTRUE) s_st.resend_giveup++;
+}
+
+/* Count the reports in a chunk of module text, in order, and cut them out so
+ * they are not taken for the answer to an AT command. Returns what is left. */
+static size_t strip_reports(char *t)
+{
+    static const struct { const char *s; uint8_t kind; } rep[] = { { "SUCCESS", 0 }, { "NO ACK", 1 }, { "NO ROUTE", 2 } };
+    char *p = t;
+    while (*p) {
+        unsigned k;
+        for (k = 0; k < 3; k++) if (strncmp(p, rep[k].s, strlen(rep[k].s)) == 0) break;
+        if (k == 3) { p++; continue; }
+        if (rep[k].kind == 0) s_st.back_ok++; else if (rep[k].kind == 1) s_st.back_noack++; else s_st.back_noroute++;
+        on_report(rep[k].kind == 0);
+        size_t l = strlen(rep[k].s);
+        memmove(p, p + l, strlen(p + l) + 1);
+    }
+    size_t n = strlen(t);
+    for (size_t i = 0; i < n; i++) if (t[i] != 13 && t[i] != 10 && t[i] != ' ') return n;   /* CR, LF */
+    t[0] = 0;
+    return 0;
+}
+
 static void rx_task(void *arg)
 {
     static uint8_t buf[256];
@@ -202,6 +269,9 @@ static void rx_task(void *arg)
             /* idle gap: flush text reply, abandon partial binary frame */
             if (tlen) {
                 text[tlen] = 0;
+                tlen = strip_reports(text);
+            }
+            if (tlen) {
                 if (s_at_waiting) xMessageBufferSend(s_at_mb, text, tlen + 1, 0);
                 else ESP_LOGI(TAG, "module: %s", text);
                 tlen = 0;
@@ -238,6 +308,7 @@ static void rx_task(void *arg)
                 if (dpos == fr.len) {
                     s_st.rx_frames++;
                     s_st.rx_bytes += fr.len;
+                    s_rx_at_ms = (uint32_t)(esp_timer_get_time() / 1000);
                     if (s_cb) s_cb(&fr);
                     st = S_IDLE;
                 }
@@ -292,13 +363,26 @@ esp_err_t e52_at(const char *cmd, char *resp, size_t rl, int timeout_ms)
     return e;
 }
 
+/* After a frame comes in, both radios are still busy for a moment: ours sends
+ * the MAC ack, the sender waits for it. A reply written to the module inside
+ * that window is lost. At 62.5k and 21.9k the window is shorter than our own
+ * turnaround; at 7k it is not (measured: 37 % of pings and 23 % of Modbus
+ * reads lost at rate 2 without this). Scales with the airtime of a short frame. */
+static uint32_t rx_holdoff_ms(void)
+{
+    static const uint32_t ms[] = { 15, 40, 300 };       /* rate 0 / 1 / 2 */
+    return ms[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate];
+}
+
 static void pace_wait(void)
 {
     int64_t now = esp_timer_get_time();
     if (now < s_tx_free_at_us) vTaskDelay(pdMS_TO_TICKS((s_tx_free_at_us - now) / 1000 + 1));
+    uint32_t since = (uint32_t)(esp_timer_get_time() / 1000) - s_rx_at_ms, hold = rx_holdoff_ms();
+    if (s_rx_at_ms && since < hold) vTaskDelay(pdMS_TO_TICKS(hold - since + 1));
 }
 
-esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len)
+static esp_err_t send_frame(uint16_t dst, const uint8_t *data, size_t len, uint8_t tries)
 {
     if (len == 0 || len > E52_MAX_PAYLOAD) return ESP_ERR_INVALID_SIZE;
     if (!s_uart_ok) return ESP_ERR_INVALID_STATE;
@@ -328,11 +412,25 @@ esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len)
             (int64_t)(e52_airtime_ms(len) + e52_airtime_ms(12) + g_cfg.e52_csma + 20) * 1000;
         s_st.tx_frames++;
         s_st.tx_bytes += len;
+        if (opt == 1) pend_push(dst, data, len, tries);     /* broadcasts get no report */
     } else {
         s_st.tx_fail++;
     }
     xSemaphoreGive(s_tx_lock);
     return e;
+}
+
+esp_err_t e52_send(uint16_t dst, const uint8_t *data, size_t len) { return send_frame(dst, data, len, 0); }
+
+static void resend_task(void *arg)
+{
+    static pend_t e;
+    for (;;) {
+        xQueueReceive(s_resend_q, &e, portMAX_DELAY);
+        s_st.resends++;
+        ESP_LOGD(TAG, "no ack from 0x%04X, resend %u", e.dst, e.tries);
+        send_frame(e.dst, e.data, e.len, e.tries);
+    }
 }
 
 esp_err_t e52_reset(void)
@@ -357,7 +455,7 @@ void e52_runtime_setup(void)
 {
     char cmd[32];
     if (e52_at("AT+HEAD=1", NULL, 0, 800) == ESP_ERR_TIMEOUT) e52_at("AT+HEAD=1", NULL, 0, 800);
-    e52_at("AT+BACK=0", NULL, 0, 800);
+    e52_at("AT+BACK=1", NULL, 0, 800);     /* delivery reports drive the automatic resend */
     snprintf(cmd, sizeof cmd, "AT+CSMA_RNG=%u", g_cfg.e52_csma);
     e52_at(cmd, NULL, 0, 800);
 }
@@ -368,7 +466,7 @@ esp_err_t e52_apply_config(char *log, size_t ll)
     int n = 0;
     __typeof__(g_cfg) *c = &g_cfg;    /* shared with node firmware (different cfg struct) */
     snprintf(cmds[n++], 40, "AT+HEAD=1");
-    snprintf(cmds[n++], 40, "AT+BACK=0");
+    snprintf(cmds[n++], 40, "AT+BACK=1");
     snprintf(cmds[n++], 40, "AT+SRC_PORT=1,1");
     snprintf(cmds[n++], 40, "AT+CHANNEL=%u,1", c->e52_channel);
     snprintf(cmds[n++], 40, "AT+POWER=%d,1", c->e52_power);
@@ -418,6 +516,7 @@ bool e52_matches_cfg(void)
     if (!query_num("AT+SRC_ADDR=?", &v) || v != g_cfg.e52_addr) return false;
     if (!query_num("AT+CHANNEL=?", &v) || v != g_cfg.e52_channel) return false;
     if (!query_num("AT+PANID=?", &v) || v != g_cfg.e52_panid) return false;
+    if (!query_num("AT+RATE=?", &v) || v != g_cfg.e52_rate) return false;   /* e.g. reset during a trial rate change */
     return true;
 }
 
@@ -425,6 +524,10 @@ esp_err_t e52_init(e52_rx_cb_t cb)
 {
     s_cb = cb;
     s_tx_lock = xSemaphoreCreateMutex();
+    s_pend_lock = xSemaphoreCreateMutex();
+    s_resend_q = xQueueCreate(3, sizeof(pend_t));
+    xTaskCreate(resend_task, "e52_resend", 3072, NULL, 9, NULL);
+    s_route_lock = xSemaphoreCreateMutex();
     s_at_mb = xMessageBufferCreate(TEXT_MAX + 8);
 
     /* not fatal: web UI stays up so pins/baud can be fixed */
@@ -454,5 +557,43 @@ esp_err_t e52_init(e52_rx_cb_t cb)
     e52_runtime_setup();
     if (e52_at("AT+SRC_ADDR=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "SRC_ADDR: %s", r);
     if (e52_at("AT+CHANNEL=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "CHANNEL: %s", r);
+    if (e52_at("AT+RATE=?", r, sizeof r, 800) == ESP_OK) ESP_LOGI(TAG, "RATE: %s (config says %u)", r, g_cfg.e52_rate);
     return ESP_OK;
+}
+
+/* ---- route table (cached) ---- */
+static e52_route_t s_routes[E52_MAX_ROUTES];
+static int s_route_n;
+static int64_t s_routes_at_us = -1;
+
+int e52_routes(e52_route_t *out, int max, uint32_t max_age_ms)
+{
+    if (!s_route_lock) return 0;   /* before e52_init */
+    xSemaphoreTake(s_route_lock, portMAX_DELAY);
+    int64_t now = esp_timer_get_time();
+    if (s_routes_at_us < 0 || now - s_routes_at_us > (int64_t)max_age_ms * 1000) {
+        static char resp[TEXT_MAX];   /* under s_route_lock */
+        if (e52_at("AT+ROUTER_READ=?", resp, sizeof resp, 1500) == ESP_OK) {
+            int n = 0;
+            for (char *l = strtok(resp, "\r\n"); l && n < E52_MAX_ROUTES; l = strtok(NULL, "\r\n")) {
+                int no, dst, hop, sc, rssi;
+                if (sscanf(l, "%d %d %d %d %d", &no, &dst, &hop, &sc, &rssi) == 5)
+                    s_routes[n++] = (e52_route_t){ (uint16_t)dst, (uint16_t)hop, (int8_t)sc, (int16_t)rssi };
+            }
+            s_route_n = n;
+        }
+        s_routes_at_us = esp_timer_get_time();   /* also after a failure: don't hammer the module */
+    }
+    int n = s_route_n < max ? s_route_n : max;
+    if (out) memcpy(out, s_routes, n * sizeof *out);
+    xSemaphoreGive(s_route_lock);
+    return n;
+}
+
+bool e52_route_to(uint16_t dst, e52_route_t *r, uint32_t max_age_ms)
+{
+    e52_route_t t[E52_MAX_ROUTES];
+    int n = e52_routes(t, E52_MAX_ROUTES, max_age_ms);
+    for (int i = 0; i < n; i++) if (t[i].dst == dst) { if (r) *r = t[i]; return true; }
+    return false;
 }

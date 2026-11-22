@@ -6,6 +6,8 @@
 #include "lmesh.h"
 #include "rtu.h"
 #include "node.h"
+#include "ota.h"
+#include "gps.h"
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -131,6 +133,9 @@ static esp_err_t h_status(httpd_req_t *r)
     uint32_t up = esp_timer_get_time() / 1000000LL;
     char h[8], f[16];
     cJSON_AddStringToObject(o, "fw", NODE_FW_VERSION);
+    cJSON_AddStringToObject(o, "slot", ota_slot());
+    cJSON_AddBoolToObject(o, "ota_trial", ota_pending());
+    cJSON_AddNumberToObject(o, "ota_left", ota_trial_left_s());
     cJSON_AddStringToObject(o, "id", g_node_id);
     cJSON_AddStringToObject(o, "site", g_cfg.site);
     cJSON_AddStringToObject(o, "name", g_cfg.name);
@@ -141,6 +146,18 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddNumberToObject(o, "gw_seen", ns.gw_seen_s ? (double)(up - ns.gw_seen_s) : -1);
     snprintf(f, sizeof f, "%.3f", e52_chan_mhz(g_cfg.e52_channel)); cJSON_AddStringToObject(o, "freq", f);
     cJSON_AddNumberToObject(o, "rate", g_cfg.e52_rate);
+    e52_route_t rt;
+    if (e52_route_to(ns.gw_addr, &rt, 10000)) {
+        cJSON_AddNumberToObject(o, "gw_rssi", rt.rssi);
+        snprintf(h, sizeof h, "%04X", rt.hop); cJSON_AddStringToObject(o, "gw_hop", h);
+    }
+    if (g_cfg.gps) {
+        gps_fix_t g;
+        bool alive = gps_get(&g);
+        cJSON_AddStringToObject(o, "gps", !alive ? "silent" : g.fix ? "fix" : "no fix");
+        cJSON_AddNumberToObject(o, "sats", g.sats);
+        if (g.fix) { cJSON_AddNumberToObject(o, "lat", g.lat); cJSON_AddNumberToObject(o, "lon", g.lon); }
+    }
     cJSON_AddNumberToObject(o, "tx", es.tx_frames);
     cJSON_AddNumberToObject(o, "rx", es.rx_frames);
     cJSON_AddNumberToObject(o, "tx_fail", es.tx_fail);
@@ -280,6 +297,14 @@ static esp_err_t h_poll(httpd_req_t *r)
     return httpd_resp_sendstr(r, "{\"ok\":true}");
 }
 
+static esp_err_t h_ota(httpd_req_t *r) { return ota_http_upload(r); }
+
+static esp_err_t h_ota_confirm(httpd_req_t *r)
+{
+    ota_confirm();
+    return httpd_resp_sendstr(r, "{\"ok\":true}");
+}
+
 static void reboot_task(void *a) { vTaskDelay(pdMS_TO_TICKS(500)); esp_restart(); }
 
 static esp_err_t h_reboot(httpd_req_t *r)
@@ -348,6 +373,8 @@ void web_start(void)
         { .uri = "/api/config", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_cfg_get },
         { .uri = "/api/config", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_cfg_post },
         { .uri = "/api/poll", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_poll },
+        { .uri = "/api/ota", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota },
+        { .uri = "/api/ota/confirm", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota_confirm },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
         { .uri = "/api/e52/apply", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_apply },
         { .uri = "/api/e52/at", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_at },

@@ -38,8 +38,15 @@ const char *mqtt_gw_base(void) { return s_base; }
 void mqtt_gw_stats(uint32_t *u, uint32_t *d) { *u = s_up; *d = s_down; }
 
 /* node -> broker */
+int survey_on_pos(uint16_t src, const char *json, int len, char *out, size_t outmax);
+
 static void on_mesh_1883(const lmesh_dgram_t *d)
 {
+    /* survey points are kept on the gateway whether or not a broker is connected */
+    static char sv[440];
+    int svl = 0;
+    if (d->len > 4 && memcmp(d->data, "pos", 4) == 0)
+        svl = survey_on_pos(d->src, (const char *)d->data + 4, d->len - 4, sv, sizeof sv);
     if (!s_conn) return;
     const uint8_t *z = memchr(d->data, 0, d->len);
     if (!z || z == d->data) return;
@@ -54,6 +61,8 @@ static void on_mesh_1883(const lmesh_dgram_t *d)
     int pll = d->len - tl - 1;
     esp_mqtt_client_enqueue(s_cli, topic, pl, pll, 0, 0, true);
     s_up++;
+    if (svl > 0 && snprintf(topic, sizeof topic, "%s/%s/survey", s_base, lvl) < (int)sizeof topic)
+        esp_mqtt_client_enqueue(s_cli, topic, sv, svl, 0, 0, true);
 }
 
 /* Downlinks are acknowledged by the node (empty UDP back to port 1884, same

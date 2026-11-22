@@ -34,7 +34,7 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
  <div class="card"><h3>Mesh nodes</h3>
   <button class="btn" onclick="disc()">Discover (broadcast ping)</button><button class="btn sec" onclick="nodes()">Refresh</button>
   <span class="mu" id="discmsg"></span>
-  <table><thead><tr><th>Addr</th><th>IPv4</th><th>Type</th><th>Site</th><th>Name</th><th>Kind</th><th>Last seen</th><th>Pkts</th><th>RTT</th><th></th></tr></thead><tbody id="nt"></tbody></table>
+  <table><thead><tr><th>Addr</th><th>IPv4</th><th>Type</th><th>Site</th><th>Name</th><th>Kind</th><th>Last seen</th><th>Pkts</th><th>RTT</th><th>Link</th><th></th></tr></thead><tbody id="nt"></tbody></table>
  </div>
 </section>
 
@@ -68,6 +68,11 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
    <div><label>CSMA random backoff ms</label><input id="e52_csma"></div>
   </div>
   <button class="btn" onclick="save(radioKeys)">Save</button><button class="btn warn" onclick="apply()">Save + apply to E52</button>
+  <p style="margin:14px 0 6px"><b>Change the air rate of the whole mesh.</b> Nodes and gateway switch together. A node that cannot find the gateway afterwards goes back on its own, and so does the gateway if nobody answers.</p>
+  <select id="mr_rate" style="width:auto"><option value="2">2 – 7 kbps (longest range)</option><option value="1">1 – 21.875 kbps</option><option value="0">0 – 62.5 kbps</option></select>
+  <label style="display:inline"><input id="mr_force" type="checkbox" style="width:auto"> leave behind nodes that do not answer</label>
+  <button class="btn warn" onclick="meshRate()">Change mesh rate</button>
+  <pre id="mr_out" style="display:none"></pre>
   <pre id="e_out" style="display:none"></pre>
  </div>
  <div class="card"><h3>E52 UART (reboot to apply)</h3>
@@ -122,43 +127,130 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
   <button class="btn sec" onclick="addMap()">Add row</button><button class="btn" onclick="saveMap()">Save map</button>
  </div>
 </section>
+<section id="t-survey">
+ <div class="card"><h3>Range survey</h3>
+  <p class="mu">Carry a survey unit (node with GPS, set on its Settings page). Each position report becomes a point here. Loss is only computed on direct links.</p>
+  <div class="row">
+   <div><label>Gateway latitude</label><input id="gw_lat" type="number" step="0.000001"></div>
+   <div><label>Gateway longitude</label><input id="gw_lon" type="number" step="0.000001"></div>
+   <div><label>Antenna gain, both ends together (dBi)</label><input id="ant_gain_db" type="number" step="0.5"></div>
+  </div>
+  <button class="btn" onclick="save(surveyKeys)">Save</button><button class="btn sec" onclick="svLoad()">Refresh</button>
+  <button class="btn sec" onclick="location.href='/api/survey.csv'">Download CSV</button>
+  <button class="btn warn" onclick="if(confirm('Clear all survey points?'))api('/api/survey',{}).then(svLoad)">Clear</button>
+  <p id="sv_sum"></p>
+ </div>
+ <div class="card"><h3>Track (north up, gateway at the cross, colour = signal at the node)</h3><div id="sv_map"></div></div>
+ <div class="card"><h3>Path loss against distance (line = free space)</h3><div id="sv_loss"></div></div>
+ <div class="card"><h3>Latest points</h3><table><thead><tr><th>Node</th><th>#</th><th>Distance</th><th>RSSI node / gw</th><th>Route</th><th>RTT</th><th>Loss</th><th>Over free space</th></tr></thead><tbody id="sv_tab"></tbody></table></div>
+</section>
+
+<section id="t-fw">
+ <div class="card"><h3>Firmware</h3>
+  <p id="fw_info"></p>
+  <input type="file" id="fw_file" accept=".bin" style="width:auto"> <button class="btn warn" onclick="fwUpload()">Upload and restart</button>
+  <pre id="fw_out" style="display:none"></pre>
+ </div>
+ <div class="card"><h3>Node firmware over the mesh</h3>
+  <p id="nf_info"></p>
+  <input type="file" id="nf_file" accept=".bin" style="width:auto"> <button class="btn" onclick="nfUpload()">Store on gateway</button>
+  <p style="margin:12px 0 6px">Send the stored firmware to one node. Takes about half an hour at 21.9 kbps and longer at 7 kbps; the mesh stays usable but slower. An interrupted transfer resumes when started again.</p>
+  <select id="nf_node" style="width:auto"></select>
+  <button class="btn warn" onclick="nfSend()">Send to node</button> <button class="btn sec" onclick="api('/api/nodefw',{cancel:true})">Cancel</button>
+  <pre id="nf_out" style="display:none"></pre>
+ </div>
+</section>
 </main>
 <script>
 const $=id=>document.getElementById(id);
-const tabs=[['status','Status'],['nodes','Nodes'],['mbtest','Modbus Test'],['radio','Radio / E52'],['net','Wi-Fi / MQTT'],['map','Unit Map']];
+const tabs=[['status','Status'],['nodes','Nodes'],['mbtest','Modbus Test'],['radio','Radio / E52'],['net','Wi-Fi / MQTT'],['map','Unit Map'],['survey','Survey'],['fw','Firmware']];
+const surveyKeys=['gw_lat','gw_lon','ant_gain_db'];
 const radioKeys=['e52_channel','e52_rate','e52_power','e52_panid','e52_addr','e52_csma'];
 const uartKeys=['uart_tx','uart_rx','uart_rst','uart_baud'];
 const netKeys=['sta_ssid','sta_pass','ap_ssid','ap_pass','hostname','web_pass','mqtt_en','mqtt_uri','mqtt_user','mqtt_pass','mqtt_base','mb_port','mb_timeout_ms'];
 let cfg={},cur='status',pollT=null;
 const api=(u,b)=>fetch(u,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).then(r=>r.json());
 function show(t){cur=t;document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id=='t-'+t));
- document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));if(t=='nodes')nodes();}
+ document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==t));if(t=='nodes')nodes();if(t=='survey')svLoad();}
 tabs.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;b.dataset.t=k;b.onclick=()=>show(k);$('nav').appendChild(b)});
 for(let c=52;c<=77;c++){const o=document.createElement('option');o.value=c;o.textContent=c+' – '+(850.125+c).toFixed(3)+' MHz';$('e52_channel').appendChild(o)}
 const hex=n=>'0x'+Number(n).toString(16).toUpperCase().padStart(4,'0');
 const age=s=>s<60?s+' s':s<3600?Math.floor(s/60)+' m':Math.floor(s/3600)+' h';
-function status(){api('/api/status').then(s=>{
+function status(){api('/api/status').then(s=>{if(s.slot)fwInfo(s);
  $('hid').textContent='ID '+s.id+' · fw '+s.fw;
  $('hst').innerHTML=(s.sta_ip!='-'?'<span class=ok>Wi-Fi '+s.sta_ip+'</span>':'<span class=bad>Wi-Fi off</span>')+' · '+(s.mqtt?'<span class=ok>MQTT</span>':'<span class=mu>MQTT off</span>');
  const kv={'Uptime':age(s.uptime),'Free heap':s.heap,'STA IP':s.sta_ip+(s.rssi?' ('+s.rssi+' dBm)':''),'AP IP':s.ap_ip,
  'Mesh IPv4':s.mesh_ip,'Frequency':s.freq+' MHz','LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'RX junk':s.rx_junk,
  'Modbus reqs / retries / timeouts':s.mb_reqs+' / '+s.mb_retries+' / '+s.mb_timeouts,'Modbus clients':s.mb_clients,'MQTT base':s.mqtt_base,'MQTT up / down':s.mqtt_up+' / '+s.mqtt_down};
  $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}
-function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.site?(n.site_dup?'⚠ duplicate: ':'')+n.site:''}${n.kind=='rtu'?` <a href="#" title="Set site ID" onclick="return setSite(${n.addr_dec},'${n.site||''}')">✎</a>`:''}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td>
+function nodes(){api('/api/nodes').then(a=>{$('nt').innerHTML=a.map(n=>`<tr><td>${n.addr}</td><td>${n.ip}</td><td>${n.type}</td><td>${n.site?(n.site_dup?'⚠ duplicate: ':'')+n.site:''}${n.kind=='rtu'?` <a href="#" title="Set site ID" onclick="return setSite(${n.addr_dec},'${n.site||''}')">✎</a>`:''}</td><td>${n.name||''}</td><td>${n.kind||''}</td><td>${age(n.age)}</td><td>${n.pkts}</td><td>${n.rtt<0?'—':n.rtt+' ms'}</td><td>${n.hop?(n.hop==n.addr?'direct':'via '+n.hop)+' '+n.rssi+' dBm':'—'}</td>
  <td><button class="btn sec" style="margin:0" onclick="ping(${n.addr_dec},this)">Ping</button></td></tr>`).join('')||'<tr><td colspan=9 class=mu>No nodes heard yet</td></tr>'})}
 function setSite(a,cur){const s=prompt('Site / location ID for node '+hex(a)+' (e.g. LSD 01-02-034-05W5):',cur);if(s===null)return false;
  api('/api/node/config',{node:a,site:s.trim()}).then(r=>{alert(r.ok?'Node acknowledged. It saves the site ID and re-announces; refresh in a few seconds.':'No acknowledgement from the node (3 tries). Is it in range?');setTimeout(nodes,3000)});return false}
 function ping(a,b){b.textContent='…';api('/api/ping',{node:a}).then(r=>{b.textContent=r.rtt<0?'no reply':r.rtt+' ms';setTimeout(nodes,500)})}
 function disc(){api('/api/discover',{}).then(()=>{$('discmsg').textContent='Listening 15 s for replies…';setTimeout(()=>{nodes();$('discmsg').textContent=''},15500)})}
-function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...uartKeys,...netKeys]){if($(k))$(k).value=String(c[k])}
+function loadCfg(){api('/api/config').then(c=>{cfg=c;for(const k of [...radioKeys,...uartKeys,...netKeys,...surveyKeys]){if($(k))$(k).value=String(c[k])}
  $('e52_panid').value=hex(c.e52_panid);$('e52_addr').value=hex(c.e52_addr);renderMap()})}
 function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='mqtt_en')v=v=='true';else if($(k).type=='number')v=Number(v);o[k]=v});return o}
 function save(keys){return api('/api/config',collect(keys)).then(r=>{alert(r.ok?r.note:'Save failed');loadCfg();return r})}
 function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving and programming E52…';
  api('/api/config',collect(radioKeys)).then(()=>api('/api/e52/apply',{})).then(r=>{$('e_out').textContent=(r.ok?'OK\n':'Some commands failed\n')+r.log;loadCfg()})}
+function mrShow(r){$('mr_out').style.display='block';$('mr_out').textContent=(r.err?r.err+'\n':'')+r.log;if(r.state==1)setTimeout(()=>api('/api/mesh/rate').then(mrShow),2000);else loadCfg()}
+function meshRate(){api('/api/mesh/rate',{rate:Number($('mr_rate').value),force:$('mr_force').checked}).then(mrShow)}
 function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
  api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
 function atq(c){$('at').value=c;at();return false}
+let nfInit=0;function fwInfo(s){if(!nfInit){nfInit=1;nfPoll();nfNodes()}let t='Running '+s.fw+' from slot '+s.slot+'.';
+ if(s.ota_trial)t+=' <b>On trial:</b> goes back to the previous firmware in '+s.ota_left+' s unless confirmed. <a href="#" onclick="api(\'/api/ota/confirm\',{});return false">Keep it</a>';
+ $('fw_info').innerHTML=t}
+function fwUpload(){const f=$('fw_file').files[0],o=$('fw_out');if(!f)return;if(!confirm('Upload '+f.name+' ('+Math.round(f.size/1024)+' KB) and restart?'))return;
+ o.style.display='block';o.textContent='Uploading…';const x=new XMLHttpRequest();x.open('POST','/api/ota');
+ x.upload.onprogress=e=>{o.textContent='Uploading '+Math.round(100*e.loaded/e.total)+' %'};
+ x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Written and verified. Restarting… this page reloads in 20 s.':'Rejected: '+(r.err||x.status);if(r.ok)setTimeout(()=>location.reload(),20000)};
+ x.onerror=()=>{o.textContent='Upload failed (connection lost)'};x.send(f)}
+function nfShow(r){$('nf_info').textContent=r.size?'Gateway holds node firmware '+r.ver+' ('+Math.round(r.size/1024)+' KB).':'No node firmware stored on the gateway yet (file: node/build/lmesh_node.bin).';
+ if(r.state||r.err){const o=$('nf_out');o.style.display='block';let t=(r.err?r.err+'\n':'')+r.log;
+  if(r.state==1&&r.size){const p=r.sent/r.size,bps=r.secs?r.sent/r.secs:0;t+='node '+r.node+': '+Math.round(100*p)+' %  '+Math.round(r.sent/1024)+' of '+Math.round(r.size/1024)+' KB'+(bps>50?'  about '+Math.ceil((r.size-r.sent)/bps/60)+' min left':'')}
+  o.textContent=t}
+ if(r.state==1)setTimeout(nfPoll,3000)}
+function nfPoll(){api('/api/nodefw').then(nfShow)}
+function nfNodes(){api('/api/nodes').then(a=>{$('nf_node').innerHTML=a.filter(n=>n.kind=='rtu').map(n=>`<option value="${n.addr_dec}">${n.addr} ${n.site||''} (fw ${n.fw})</option>`).join('')})}
+function nfUpload(){const f=$('nf_file').files[0],o=$('nf_out');if(!f)return;o.style.display='block';o.textContent='Uploading to gateway…';
+ const x=new XMLHttpRequest();x.open('POST','/api/nodefw/upload');x.upload.onprogress=e=>{o.textContent='Uploading to gateway '+Math.round(100*e.loaded/e.total)+' %'};
+ x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Stored.':'Rejected: '+(r.err||x.status);nfPoll()};x.onerror=()=>{o.textContent='Upload failed'};x.send(f)}
+function nfSend(){const n=Number($('nf_node').value);if(!n||!confirm('Send the stored firmware to this node over the mesh?'))return;api('/api/nodefw',{node:n}).then(nfShow)}
+let svT=null;
+function svCol(r){if(!r)return '#8a96a3';const t=Math.max(0,Math.min(1,(r+120)/70));return 'hsl('+Math.round(120*t)+',75%,50%)'}
+function svLoad(){clearTimeout(svT);api('/api/survey').then(d=>{const R=d.rows.map(r=>({t:r[0],node:r[1],n:r[2],fix:r[3],lat:r[4],lon:r[5],sats:r[6],dist:r[7],rn:r[8],rg:r[9],hop:r[10],rtt:r[11],loss:r[12],fspl:r[13]}));
+ const gwSet=d.gw[0]||d.gw[1],F=R.filter(p=>p.fix);
+ // delivery: gaps in each node's counter
+ const by={};R.forEach(p=>{(by[p.node]=by[p.node]||[]).push(p.n)});let got=0,exp=0;Object.values(by).forEach(a=>{got+=a.length;let e=1;for(let i=1;i<a.length;i++){const g=a[i]-a[i-1];e+=g>0&&g<1000?g:1}exp+=e});
+ const far=F.reduce((m,p)=>Math.max(m,p.dist),0),dir=R.filter(p=>p.loss>=0).length;
+ $('sv_sum').textContent=R.length?R.length+' points, '+F.length+' with a GPS fix, '+dir+' on a direct link. Delivery '+Math.round(100*got/exp)+' %. '+(gwSet&&far>0?'Farthest point '+Math.round(far)+' m.':gwSet?'':'Set the gateway position to get distances.'):'No points yet.';
+ // track
+ let m='';if(F.length){const la0=gwSet?d.gw[0]:F[0].lat,lo0=gwSet?d.gw[1]:F[0].lon,kx=111320*Math.cos(la0*Math.PI/180),ky=110540;
+  const P=F.map(p=>({x:(p.lon-lo0)*kx,y:(p.lat-la0)*ky,p})),ext=Math.max(50,...P.map(q=>Math.max(Math.abs(q.x),Math.abs(q.y))))*1.1,W=520,sc=W/2/ext;
+  const ring=Math.pow(10,Math.floor(Math.log10(ext)));
+  m='<svg viewBox="0 0 '+W+' '+W+'" style="width:100%;max-width:'+W+'px;background:var(--bg);border-radius:6px">';
+  for(let k=1;k*ring<=ext;k++)m+='<circle cx="'+W/2+'" cy="'+W/2+'" r="'+k*ring*sc+'" fill="none" stroke="#2a3542"/><text x="'+(W/2+3)+'" y="'+(W/2-k*ring*sc-3)+'" fill="#8a96a3" font-size="10">'+(k*ring>=1000?k*ring/1000+' km':k*ring+' m')+'</text>';
+  m+='<path d="M'+(W/2-7)+' '+W/2+'h14M'+W/2+' '+(W/2-7)+'v14" stroke="#d8dee6" stroke-width="2"/>';
+  P.forEach(q=>{m+='<circle cx="'+(W/2+q.x*sc).toFixed(1)+'" cy="'+(W/2-q.y*sc).toFixed(1)+'" r="4" fill="'+svCol(q.p.rn)+'"'+(q.p.loss<0?' stroke="#fff" stroke-width="1"':'')+'><title>'+Math.round(q.p.dist)+' m, '+q.p.rn+' dBm, via '+q.p.hop+'</title></circle>'});
+  m+='</svg><p class="mu">Green = strong (−50 dBm), red = weak (−120 dBm). White outline = relayed through another node.</p>'}
+ $('sv_map').innerHTML=m||'<span class="mu">No points with a GPS fix yet.</span>';
+ // loss vs distance (log x)
+ const L=F.filter(p=>p.loss>=0&&p.dist>=1);let c='';if(L.length){const W=520,H=300,pl=40,pb=24,x0=Math.log10(Math.max(1,Math.min(...L.map(p=>p.dist))/1.5)),x1=Math.log10(Math.max(...L.map(p=>p.dist))*1.5),
+  ys=L.map(p=>p.loss).concat(L.map(p=>p.fspl)),y0=Math.floor((Math.min(...ys)-5)/10)*10,y1=Math.ceil((Math.max(...ys)+5)/10)*10,
+  X=v=>pl+(Math.log10(v)-x0)/(x1-x0)*(W-pl-8),Y=v=>8+(v-y0)/(y1-y0)*(H-pb-8);
+  c='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:'+W+'px;background:var(--bg);border-radius:6px">';
+  for(let y=y0;y<=y1;y+=10)c+='<line x1="'+pl+'" x2="'+(W-8)+'" y1="'+Y(y)+'" y2="'+Y(y)+'" stroke="#2a3542"/><text x="4" y="'+(Y(y)+4)+'" fill="#8a96a3" font-size="10">'+y+' dB</text>';
+  for(let e=Math.ceil(x0);e<=Math.floor(x1);e++){const v=Math.pow(10,e);c+='<line x1="'+X(v)+'" x2="'+X(v)+'" y1="8" y2="'+(H-pb)+'" stroke="#2a3542"/><text x="'+(X(v)-10)+'" y="'+(H-8)+'" fill="#8a96a3" font-size="10">'+(v>=1000?v/1000+' km':v+' m')+'</text>'}
+  const mhz=Number(($('e52_channel')||{}).value||65)+850.125,fs=v=>32.44+20*Math.log10(mhz)+20*Math.log10(v/1000),a=Math.pow(10,x0),b=Math.pow(10,x1);
+  c+='<line x1="'+X(a)+'" y1="'+Y(fs(a))+'" x2="'+X(b)+'" y2="'+Y(fs(b))+'" stroke="#3fa9f5" stroke-width="2"/>';
+  L.forEach(p=>{c+='<circle cx="'+X(p.dist).toFixed(1)+'" cy="'+Y(p.loss).toFixed(1)+'" r="3.5" fill="'+svCol(p.rn)+'"><title>'+Math.round(p.dist)+' m: '+p.loss.toFixed(0)+' dB, '+(p.loss-p.fspl).toFixed(0)+' dB over free space</title></circle>'});
+  c+='</svg><p class="mu">Loss grows downwards. Points below the line lose more than free space: that is terrain, buildings and trees.</p>'}
+ $('sv_loss').innerHTML=c||'<span class="mu">Needs points with a fix, a direct link and the gateway position.</span>';
+ $('sv_tab').innerHTML=R.slice(-12).reverse().map(p=>'<tr><td>'+p.node+'</td><td>'+p.n+'</td><td>'+(p.dist>=0?Math.round(p.dist)+' m':p.fix?'—':'no fix')+'</td><td>'+(p.rn||'—')+' / '+(p.rg||'—')+' dBm</td><td>'+(p.loss>=0?'direct':'via '+p.hop)+'</td><td>'+(p.rtt<0?'lost':p.rtt+' ms')+'</td><td>'+(p.loss>=0?p.loss.toFixed(0)+' dB':'—')+'</td><td>'+(p.loss>=0&&p.fspl>=0?(p.loss-p.fspl).toFixed(0)+' dB':'—')+'</td></tr>').join('');
+ if(cur=='survey')svT=setTimeout(svLoad,5000)})}
 function reboot(){if(confirm('Reboot gateway?'))api('/api/reboot',{})}
 function mb(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
  const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};
