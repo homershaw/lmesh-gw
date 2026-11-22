@@ -8,3 +8,4 @@ dependencies.lock
 # editor lock files left while a document is open
 .~lock.*#
 ~$*
+__pycache__/
