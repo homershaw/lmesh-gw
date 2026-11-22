@@ -206,10 +206,10 @@ static void publish_pos(void)
     int32_t rtt = lmesh_ping(s_gw, 4000);
     e52_route_t rt;
     bool have = e52_route_to(s_gw, &rt, 1000);
-    char b[200];
+    char b[260];
     int l = snprintf(b, sizeof b, "{\"n\":%u,\"fix\":%d", ++n, g.fix ? 1 : 0);
     if (g.fix) l += snprintf(b + l, sizeof b - l, ",\"lat\":%.6f,\"lon\":%.6f,\"alt\":%.0f,\"hdop\":%.1f,\"spd\":%.1f", g.lat, g.lon, g.alt, g.hdop, g.spd_kmh);
-    l += snprintf(b + l, sizeof b - l, ",\"sats\":%u", g.sats);
+    l += snprintf(b + l, sizeof b - l, ",\"sats\":%u,\"view\":%u,\"heard\":%u,\"snr\":%u", g.sats, g.view, g.heard, g.snr);
     if (g.utc[0]) l += snprintf(b + l, sizeof b - l, ",\"utc\":\"%s\"", g.utc);
     if (have) l += snprintf(b + l, sizeof b - l, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
     l += snprintf(b + l, sizeof b - l, ",\"rtt\":%ld%s}", (long)rtt, alive ? "" : ",\"gps\":\"silent\"");

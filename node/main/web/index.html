@@ -142,7 +142,7 @@ function status(){api('/api/status').then(s=>{
  $('hid').textContent=(s.name?s.name+' · ':'')+'mesh '+s.addr+' · fw '+s.fw;
  if(s.slot)fwInfo(s);
  $('hst').innerHTML=s.gw_seen>=0&&s.gw_seen<900?'<span class=ok>gateway '+s.gw+'</span>':'<span class=bad>gateway '+s.gw+' not heard</span>';
- const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),...(s.gps?{'GPS':s.gps+', '+s.sats+' sats'+(s.lat!==undefined?' @ '+s.lat.toFixed(5)+', '+s.lon.toFixed(5):'')}:{}),'Link to gateway':s.gw_hop?(s.gw_hop==s.gw?'direct':'via '+s.gw_hop)+', '+s.gw_rssi+' dBm':'no route yet','Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
+ const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),...(s.gps?{'GPS':s.gps+', '+s.sats+' sats used, '+s.heard+' heard, best '+s.snr+' dB-Hz'+(s.lat!==undefined?' @ '+s.lat.toFixed(5)+', '+s.lon.toFixed(5):'')}:{}),'Link to gateway':s.gw_hop?(s.gw_hop==s.gw?'direct':'via '+s.gw_hop)+', '+s.gw_rssi+' dBm':'no route yet','Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
  'RTU ok / exceptions':s.rtu_ok+' / '+s.rtu_exc,'RTU timeouts / bad':s.rtu_timeout+' / '+s.rtu_crc,'Mesh Modbus reqs (dups)':s.mb_reqs+' ('+s.mb_dups+')',
  'Radio':s.freq+' MHz, rate '+s.rate,'LoRa TX / RX':s.tx+' / '+s.rx,'TX fail / AT err':s.tx_fail+' / '+s.at_err,'Free heap':s.heap};
  $('st').innerHTML=Object.entries(kv).map(([k,v])=>`<div class=kv><i>${k}</i>${v}</div>`).join('');}).catch(()=>$('hst').innerHTML='<span class=bad>offline</span>')}

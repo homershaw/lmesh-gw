@@ -156,6 +156,9 @@ static esp_err_t h_status(httpd_req_t *r)
         bool alive = gps_get(&g);
         cJSON_AddStringToObject(o, "gps", !alive ? "silent" : g.fix ? "fix" : "no fix");
         cJSON_AddNumberToObject(o, "sats", g.sats);
+        cJSON_AddNumberToObject(o, "view", g.view);
+        cJSON_AddNumberToObject(o, "heard", g.heard);
+        cJSON_AddNumberToObject(o, "snr", g.snr);
         if (g.fix) { cJSON_AddNumberToObject(o, "lat", g.lat); cJSON_AddNumberToObject(o, "lon", g.lon); }
     }
     cJSON_AddNumberToObject(o, "tx", es.tx_frames);

@@ -250,7 +250,7 @@ function svLoad(){clearTimeout(svT);api('/api/survey').then(d=>{const R=d.rows.m
   c+='</svg><p class="mu">Loss grows downwards. Points below the line lose more than free space: that is terrain, buildings and trees.</p>'}
  $('sv_loss').innerHTML=c||'<span class="mu">Needs points with a fix, a direct link and the gateway position.</span>';
  $('sv_tab').innerHTML=R.slice(-12).reverse().map(p=>'<tr><td>'+p.node+'</td><td>'+p.n+'</td><td>'+(p.dist>=0?Math.round(p.dist)+' m':p.fix?'—':'no fix')+'</td><td>'+(p.rn||'—')+' / '+(p.rg||'—')+' dBm</td><td>'+(p.loss>=0?'direct':'via '+p.hop)+'</td><td>'+(p.rtt<0?'lost':p.rtt+' ms')+'</td><td>'+(p.loss>=0?p.loss.toFixed(0)+' dB':'—')+'</td><td>'+(p.loss>=0&&p.fspl>=0?(p.loss-p.fspl).toFixed(0)+' dB':'—')+'</td></tr>').join('');
- if(cur=='survey')svT=setTimeout(svLoad,5000)})}
+ if(cur=='survey')svT=setTimeout(svLoad,10000)})}
 function reboot(){if(confirm('Reboot gateway?'))api('/api/reboot',{})}
 function mb(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
  const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};

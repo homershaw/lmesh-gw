@@ -4,8 +4,8 @@
  * A survey unit is a C6 + E52 + GPS with no RTU, so the GPS module's TX is
  * wired to the RS-485 receive pin (XIAO D3) and takes over that UART at
  * 9600 baud. Any NMEA receiver works; tested target is the u-blox NEO-6M.
- * Only GGA (position, altitude, satellites, HDOP) and RMC (date, speed) are
- * read. Sentences with a wrong checksum are dropped.
+ * GGA (position, altitude, satellites, HDOP), RMC (date, speed) and GSV
+ * (satellites in view and signal strength, for fault finding) are read. Sentences with a wrong checksum are dropped.
  */
 #include <string.h>
 #include <stdlib.h>
@@ -60,8 +60,8 @@ static int split(char *s, char **f, int max)
 static void sentence(char *s)
 {
     if (!checksum_ok(s)) return;
-    char *f[20];
-    int n = split(s, f, 20);
+    char *f[24];
+    int n = split(s, f, 24);
     if (strlen(f[0]) < 6) return;
     const char *type = f[0] + 3;                 /* skip "$GP" / "$GN" / "$GL" */
     gps_fix_t g;
@@ -70,6 +70,7 @@ static void sentence(char *s)
     portEXIT_CRITICAL(&s_mux);
     g.sentences++;
     bool got_fix = false;
+    static uint8_t gsv_heard, gsv_snr;           /* running totals over one GSV group */
 
     if (strcmp(type, "GGA") == 0 && n >= 10) {
         /* GGA,time,lat,N,lon,E,quality,sats,hdop,alt,M,... */
@@ -83,6 +84,19 @@ static void sentence(char *s)
             g.fix = true;
             got_fix = true;
         } else g.fix = false;
+    } else if (strcmp(type, "GSV") == 0 && n >= 5 && s[2] == 'P') {
+        /* GSV,messages,this,in view,{prn,elev,azimuth,snr} x up to 4. GPS only ($GP). */
+        if (atoi(f[2]) <= 1) gsv_heard = gsv_snr = 0;
+        for (int i = 7; i < n - 1; i += 4) {     /* last field is the checksum */
+            int snr = atoi(f[i]);
+            if (snr > 0) gsv_heard++;
+            if (snr > gsv_snr) gsv_snr = (uint8_t)snr;
+        }
+        if (atoi(f[2]) >= atoi(f[1])) {
+            g.view = (uint8_t)atoi(f[3]);
+            g.heard = gsv_heard;
+            g.snr = gsv_snr;
+        }
     } else if (strcmp(type, "RMC") == 0 && n >= 10) {
         /* RMC,time,A/V,lat,N,lon,E,knots,course,ddmmyy,... */
         if (f[2][0] == 'A') g.spd_kmh = (float)(atof(f[7]) * 1.852);

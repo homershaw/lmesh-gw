@@ -14,8 +14,13 @@
  * the link is direct and the loss figure is meaningful. On a relayed route
  * the point is kept (hop, RTT and delivery still matter) but has no loss.
  *
- * The last SURVEY_MAX points are kept in RAM for the web page; each one is
- * also published to MQTT as <base>/<site>/survey.
+ * Points are kept in RAM for the web page, in two rings: one for reports
+ * with a GPS fix (the survey itself, FIX_MAX points = about 4 hours at one
+ * report per 10 s) and a short one for reports without (NOFIX_MAX, enough to
+ * see that a unit is alive and what its link looks like). A unit sitting
+ * without a fix therefore never pushes real survey points out. Each point is
+ * also published to MQTT as <base>/<site>/survey. Nothing survives a restart:
+ * download the CSV to keep a survey.
  */
 #include <string.h>
 #include <stdio.h>
@@ -30,24 +35,45 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
-#define SURVEY_MAX 600
+#define FIX_MAX   1500
+#define NOFIX_MAX 300
 
 typedef struct {
+    uint32_t seq;            /* order of arrival across both rings, from 1 */
     uint32_t t_s;            /* gateway uptime */
+    int32_t lat7, lon7;      /* degrees x 1e7 */
+    float dist_m;            /* <0 = unknown (no fix or gateway position not set) */
+    float loss, fspl;        /* dB; loss <0 = not a direct link */
     uint16_t node, hop;      /* hop: the node's next hop towards the gateway */
     uint16_t n;              /* node's running counter: gaps = lost reports */
-    double latd, lond;       /* degrees */
-    float dist_m;            /* <0 = unknown (no fix or gateway position not set) */
     int16_t rssi_n, rssi_g;  /* at the node / at the gateway; 0 = unknown */
     int16_t rtt_ms;          /* node's ping to the gateway, -1 = lost */
-    float loss, fspl;        /* dB; loss <0 = not a direct link */
     uint8_t sats;
     bool fix;
 } pt_t;
 
-static pt_t s_pt[SURVEY_MAX];
-static int s_head, s_n;
+typedef struct { pt_t *p; int max, head, n; } ring_t;
+
+static pt_t s_fix_pts[FIX_MAX], s_nofix_pts[NOFIX_MAX];
+static ring_t s_fixr = { s_fix_pts, FIX_MAX, 0, 0 }, s_nofixr = { s_nofix_pts, NOFIX_MAX, 0, 0 };
+static uint32_t s_seq;
 static SemaphoreHandle_t s_lock;
+
+static void ring_put(ring_t *r, const pt_t *p)
+{
+    r->p[(r->head + r->n) % r->max] = *p;
+    if (r->n < r->max) r->n++; else r->head = (r->head + 1) % r->max;
+}
+
+static const pt_t *ring_at(const ring_t *r, int i) { return &r->p[(r->head + i) % r->max]; }
+
+/* index of the first point newer than seq (points are in seq order) */
+static int ring_after(const ring_t *r, uint32_t seq)
+{
+    int lo = 0, hi = r->n;
+    while (lo < hi) { int m = (lo + hi) / 2; if (ring_at(r, m)->seq > seq) hi = m; else lo = m + 1; }
+    return lo;
+}
 
 static double rad(double d) { return d * 0.017453292519943295; }
 
@@ -72,8 +98,9 @@ int survey_on_pos(uint16_t src, const char *json, int len, char *out, size_t out
     p.node = src;
     p.n = (uint16_t)jd(o, "n", 0);
     p.fix = jd(o, "fix", 0) != 0;
-    p.latd = jd(o, "lat", 0);
-    p.lond = jd(o, "lon", 0);
+    double latd = jd(o, "lat", 0), lond = jd(o, "lon", 0);
+    p.lat7 = (int32_t)lround(latd * 1e7);
+    p.lon7 = (int32_t)lround(lond * 1e7);
     p.sats = (uint8_t)jd(o, "sats", 0);
     p.rssi_n = (int16_t)jd(o, "rssi", 0);
     p.rtt_ms = (int16_t)jd(o, "rtt", -1);
@@ -89,7 +116,7 @@ int survey_on_pos(uint16_t src, const char *json, int len, char *out, size_t out
     if (e52_route_to(src, &r, 3000)) { p.rssi_g = r.rssi; hop_g = r.hop; }
 
     bool have_gw = g_cfg.gw_lat != 0 || g_cfg.gw_lon != 0;
-    p.dist_m = (p.fix && have_gw) ? (float)haversine_m(g_cfg.gw_lat, g_cfg.gw_lon, p.latd, p.lond) : -1;
+    p.dist_m = (p.fix && have_gw) ? (float)haversine_m(g_cfg.gw_lat, g_cfg.gw_lon, latd, lond) : -1;
     p.loss = -1;
     p.fspl = -1;
     if (p.dist_m >= 1) {
@@ -100,13 +127,13 @@ int survey_on_pos(uint16_t src, const char *json, int len, char *out, size_t out
     if (direct) p.loss = (float)(g_cfg.e52_power + g_cfg.ant_gain_db - p.rssi_n);
 
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    s_pt[(s_head + s_n) % SURVEY_MAX] = p;
-    if (s_n < SURVEY_MAX) s_n++; else s_head = (s_head + 1) % SURVEY_MAX;
+    p.seq = ++s_seq;
+    ring_put(p.fix ? &s_fixr : &s_nofixr, &p);
     xSemaphoreGive(s_lock);
 
     int l = snprintf(out, outmax, "{\"n\":%u,\"fix\":%d,\"lat\":%.6f,\"lon\":%.6f,\"sats\":%u,\"utc\":\"%s\","
                      "\"rssi_node\":%d,\"rssi_gw\":%d,\"hop\":\"%04X\",\"hop_gw\":\"%04X\",\"direct\":%s,\"rtt\":%d",
-                     p.n, p.fix, p.latd, p.lond, p.sats, utc, p.rssi_n, p.rssi_g, p.hop, hop_g, direct ? "true" : "false", p.rtt_ms);
+                     p.n, p.fix, latd, lond, p.sats, utc, p.rssi_n, p.rssi_g, p.hop, hop_g, direct ? "true" : "false", p.rtt_ms);
     if (p.dist_m >= 0 && l < (int)outmax) l += snprintf(out + l, outmax - l, ",\"dist_m\":%.0f", p.dist_m);
     if (p.loss >= 0 && l < (int)outmax) l += snprintf(out + l, outmax - l, ",\"loss_db\":%.1f", p.loss);
     if (p.fspl >= 0 && l < (int)outmax) l += snprintf(out + l, outmax - l, ",\"fspl_db\":%.1f", p.fspl);
@@ -119,29 +146,41 @@ void survey_clear(void)
 {
     if (!s_lock) return;
     xSemaphoreTake(s_lock, portMAX_DELAY);
-    s_head = s_n = 0;
+    s_fixr.head = s_fixr.n = s_nofixr.head = s_nofixr.n = 0;      /* s_seq keeps counting */
     xSemaphoreGive(s_lock);
 }
 
-/* Points as rows for the web page and the CSV download; caller frees.
- * csv=false: JSON {"gw":[lat,lon],"cols":[...],"rows":[[...],...]} */
-char *survey_dump(bool csv)
+#define COLS "t,node,n,fix,lat,lon,sats,dist_m,rssi_node,rssi_gw,hop,rtt_ms,loss_db,fspl_db"
+
+/* The points go out in pieces so that no large buffer is needed and the lock
+ * is never held while the network is slow:
+ *   survey_head()  the opening        csv: column names, json: {"gw":[lat,lon],"cols":"...","rows":[
+ *   survey_rows()  the next rows newer than *after, oldest first, both rings
+ *                  merged; moves *after on; returns 0 when there are no more
+ *   json only: close with "]}"
+ * Start with *after = 0. */
+int survey_head(bool csv, char *b, size_t max)
 {
-    static const char *cols = "t,node,n,fix,lat,lon,sats,dist_m,rssi_node,rssi_gw,hop,rtt_ms,loss_db,fspl_db";
-    size_t cap = 200 + (size_t)s_n * 110, l = 0;
-    char *b = malloc(cap);
-    if (!b) return NULL;
-    if (csv) l += snprintf(b, cap, "%s\n", cols);
-    else l += snprintf(b, cap, "{\"gw\":[%.6f,%.6f],\"cols\":\"%s\",\"rows\":[", g_cfg.gw_lat, g_cfg.gw_lon, cols);
-    if (s_lock) xSemaphoreTake(s_lock, portMAX_DELAY);
-    for (int i = 0; i < s_n && l + 120 < cap; i++) {
-        const pt_t *p = &s_pt[(s_head + i) % SURVEY_MAX];
-        l += snprintf(b + l, cap - l, csv ? "%s%lu,%04X,%u,%d,%.6f,%.6f,%u,%.0f,%d,%d,%04X,%d,%.1f,%.1f\n"
+    if (csv) return snprintf(b, max, COLS "\n");
+    return snprintf(b, max, "{\"gw\":[%.6f,%.6f],\"cols\":\"" COLS "\",\"rows\":[", g_cfg.gw_lat, g_cfg.gw_lon);
+}
+
+int survey_rows(bool csv, uint32_t *after, char *b, size_t max)
+{
+    if (!s_lock) return 0;
+    size_t l = 0;
+    xSemaphoreTake(s_lock, portMAX_DELAY);
+    int i = ring_after(&s_fixr, *after), j = ring_after(&s_nofixr, *after);
+    while (l + 130 < max && (i < s_fixr.n || j < s_nofixr.n)) {
+        const pt_t *p;
+        if (j >= s_nofixr.n || (i < s_fixr.n && ring_at(&s_fixr, i)->seq < ring_at(&s_nofixr, j)->seq)) p = ring_at(&s_fixr, i++);
+        else p = ring_at(&s_nofixr, j++);
+        l += snprintf(b + l, max - l, csv ? "%s%lu,%04X,%u,%d,%.6f,%.6f,%u,%.0f,%d,%d,%04X,%d,%.1f,%.1f\n"
                                           : "%s[%lu,\"%04X\",%u,%d,%.6f,%.6f,%u,%.0f,%d,%d,\"%04X\",%d,%.1f,%.1f]",
-                      csv ? "" : (i ? "," : ""), (unsigned long)p->t_s, p->node, p->n, p->fix, p->latd, p->lond, p->sats,
+                      csv ? "" : (*after ? "," : ""), (unsigned long)p->t_s, p->node, p->n, p->fix, p->lat7 / 1e7, p->lon7 / 1e7, p->sats,
                       p->dist_m, p->rssi_n, p->rssi_g, p->hop, p->rtt_ms, p->loss, p->fspl);
+        *after = p->seq;
     }
-    if (s_lock) xSemaphoreGive(s_lock);
-    if (!csv) l += snprintf(b + l, cap - l, "]}");
-    return b;
+    xSemaphoreGive(s_lock);
+    return (int)l;
 }

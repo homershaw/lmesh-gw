@@ -9,7 +9,10 @@ typedef struct {
     float  alt;            /* m above mean sea level */
     float  hdop;
     float  spd_kmh;
-    uint8_t sats;
+    uint8_t sats;          /* satellites used in the position */
+    uint8_t view;          /* satellites the receiver expects overhead (GSV) */
+    uint8_t heard;         /* of those, how many it is receiving a signal from */
+    uint8_t snr;           /* strongest signal, dB-Hz (35+ good, under 25 too weak to use) */
     char   utc[21];        /* "2026-11-22T17:03:10Z", empty until the first RMC with a date */
     uint32_t sentences;    /* valid sentences since boot */
 } gps_fix_t;

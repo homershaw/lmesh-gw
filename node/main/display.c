@@ -192,7 +192,7 @@ static void compose(uint32_t tick)
     if (g_cfg.gps) {                             /* survey unit: position instead of RTU values */
         gps_fix_t g;
         bool alive = gps_get(&g);
-        line(3, "GPS %s sats %u", !alive ? "silent" : g.fix ? "fix" : "no fix", g.sats);
+        line(3, "GPS %s %u/%u %udB", !alive ? "silent" : g.fix ? "fix" : "no fix", g.sats, g.heard, g.snr);
         if (g.fix) {
             line(5, "lat %.5f", g.lat);
             line(6, "lon %.5f", g.lon);

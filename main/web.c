@@ -389,7 +389,8 @@ static esp_err_t h_sync(httpd_req_t *r)
     return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
 }
 
-char *survey_dump(bool csv);
+int survey_head(bool csv, char *b, size_t max);
+int survey_rows(bool csv, uint32_t *after, char *b, size_t max);
 void survey_clear(void);
 
 /* GET /api/survey: points as JSON. GET /api/survey.csv: the same as a file. POST: clear. */
@@ -397,12 +398,17 @@ static esp_err_t h_survey(httpd_req_t *r)
 {
     if (r->method == HTTP_POST) { survey_clear(); return httpd_resp_sendstr(r, "{\"ok\":true}"); }
     bool csv = strstr(r->uri, ".csv") != NULL;
-    char *s = survey_dump(csv);
-    if (!s) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    char *b = malloc(2048);
+    if (!b) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
     httpd_resp_set_type(r, csv ? "text/csv" : "application/json");
     if (csv) httpd_resp_set_hdr(r, "Content-Disposition", "attachment; filename=\"lmesh-survey.csv\"");
-    esp_err_t e = httpd_resp_sendstr(r, s);
-    free(s);
+    uint32_t after = 0;
+    int n = survey_head(csv, b, 2048);
+    esp_err_t e = httpd_resp_send_chunk(r, b, n);
+    while (e == ESP_OK && (n = survey_rows(csv, &after, b, 2048)) > 0) e = httpd_resp_send_chunk(r, b, n);
+    if (e == ESP_OK && !csv) e = httpd_resp_send_chunk(r, "]}", 2);
+    free(b);
+    if (e == ESP_OK) e = httpd_resp_send_chunk(r, NULL, 0);
     return e;
 }
 
