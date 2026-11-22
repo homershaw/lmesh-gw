@@ -11,7 +11,9 @@ Mermaid). The Markdown files stay the source; rerun this after editing them.
 import io
 import os
 import re
+import shutil
 import sys
+import zipfile
 
 from docx import Document
 from docx.enum.table import WD_TABLE_ALIGNMENT
@@ -21,7 +23,10 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BODY_FONT, CODE_FONT = 'Calibri', 'Consolas'
+# Arial and Courier New exist on Windows and macOS, and every Linux desktop maps
+# them to metric-compatible fonts (Liberation Sans / Mono), so pages break the
+# same everywhere. Calibri and Consolas are Windows-only and fell back badly.
+BODY_FONT, CODE_FONT = 'Arial', 'Courier New'
 INK, MUTED, ACCENT = RGBColor(0x1D, 0x2B, 0x36), RGBColor(0x5B, 0x67, 0x70), RGBColor(0x1F, 0x5F, 0xBF)
 
 DOCS = [
@@ -269,7 +274,7 @@ def new_document(title):
     sec.left_margin = sec.right_margin = Inches(1)
     sec.top_margin = sec.bottom_margin = Inches(0.9)
     st = doc.styles['Normal']
-    st.font.name, st.font.size, st.font.color.rgb = BODY_FONT, Pt(11), INK
+    st.font.name, st.font.size, st.font.color.rgb = BODY_FONT, Pt(10.5), INK
     st.paragraph_format.space_after = Pt(6)
     for name, size, before, color in (('Title', 24, 0, INK), ('Heading 1', 17, 18, ACCENT), ('Heading 2', 13.5, 14, INK), ('Heading 3', 12, 10, INK)):
         h = doc.styles[name]
@@ -289,6 +294,65 @@ def new_document(title):
     fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
     page_number_field(fp)
     return doc
+
+
+def make_portable(path):
+    """Remove everything in the file that depends on fonts a machine may not have.
+
+    python-docx starts from a Word template whose defaults point at theme fonts
+    (Calibri, Cambria), whose theme lists a font per script (Japanese, Chinese,
+    Thai...), and whose bullets are a private-use character in the Symbol font.
+    On a machine without those fonts the text falls back unpredictably, the font
+    list fills with foreign names and bullets turn into boxes. Rewrite those
+    parts to name only BODY_FONT and CODE_FONT and to use a real bullet character.
+    """
+    def fix_rfonts(m):
+        tag = re.sub(r'\s+w:(?:asciiTheme|hAnsiTheme|eastAsiaTheme|cstheme)="[^"]*"', '', m.group(0))
+        for attr in ('ascii', 'hAnsi', 'eastAsia', 'cs'):
+            if ('w:%s="' % attr) not in tag:
+                tag = tag.replace('<w:rFonts', '<w:rFonts w:%s="%s"' % (attr, BODY_FONT), 1)
+        return re.sub(r'w:(ascii|hAnsi|eastAsia|cs)="(?!%s")[^"]*"' % re.escape(CODE_FONT), r'w:\1="%s"' % BODY_FONT, tag)
+
+    tmp = path + '.tmp'
+    with zipfile.ZipFile(path) as zin, zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zout:
+        for item in zin.infolist():
+            data = zin.read(item.filename)
+            name = item.filename
+            if name in ('word/stylesWithEffects.xml', 'docProps/thumbnail.jpeg'):
+                continue                                   # legacy duplicate of styles; stock preview picture
+            if name == 'word/styles.xml':
+                t = data.decode('utf-8')
+                t = re.sub(r'<w:rFonts\b[^>]*/>', fix_rfonts, t)
+                data = t.encode('utf-8')
+            elif name == 'word/theme/theme1.xml':
+                t = data.decode('utf-8')
+                t = re.sub(r'<a:font script="[^"]*" typeface="[^"]*"/>', '', t)
+                t = re.sub(r'<a:latin typeface="[^"]*"', '<a:latin typeface="%s"' % BODY_FONT, t)
+                data = t.encode('utf-8')
+            elif name == 'word/numbering.xml':
+                t = data.decode('utf-8')
+                t = t.replace('\uf0b7', '\u2022').replace('\uf0a7', '\u25aa')
+                t = re.sub(r'<w:rFonts w:ascii="(?:Symbol|Wingdings)" w:hAnsi="(?:Symbol|Wingdings)"[^>]*/>',
+                           '<w:rFonts w:ascii="%s" w:hAnsi="%s" w:cs="%s"/>' % (BODY_FONT, BODY_FONT, BODY_FONT), t)
+                data = t.encode('utf-8')
+            elif name == 'word/fontTable.xml':
+                head = data.decode('utf-8').split('<w:font ', 1)[0]
+                fonts = ''.join('<w:font w:name="%s"><w:charset w:val="00"/><w:family w:val="%s"/><w:pitch w:val="%s"/></w:font>' % f
+                                for f in ((BODY_FONT, 'swiss', 'variable'), (CODE_FONT, 'modern', 'fixed')))
+                data = (head + fonts + '</w:fonts>').encode('utf-8')
+            elif name == '[Content_Types].xml':
+                t = data.decode('utf-8')
+                t = re.sub(r'<Override PartName="/word/stylesWithEffects.xml"[^>]*/>', '', t)
+                t = re.sub(r'<Override PartName="/docProps/thumbnail.jpeg"[^>]*/>', '', t)
+                data = t.encode('utf-8')
+            elif name.endswith('.rels'):
+                t = data.decode('utf-8')
+                t = re.sub(r'<Relationship [^>]*Target="[^"]*(?:stylesWithEffects\.xml|thumbnail\.jpeg)"[^>]*/>', '', t)
+                data = t.encode('utf-8')
+            if name.endswith('/'):
+                continue
+            zout.writestr(item.filename, data)
+    shutil.move(tmp, path)
 
 
 # ---------------------------------------------------------------- converter
@@ -372,6 +436,7 @@ def convert(src, dst, title):
         i += 1
     out = os.path.join(ROOT, dst)
     doc.save(out)
+    make_portable(out)
     return out
 
 
