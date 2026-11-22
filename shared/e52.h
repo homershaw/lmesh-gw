@@ -20,6 +20,8 @@ typedef void (*e52_rx_cb_t)(const e52_frame_t *f);
 typedef struct {
     uint32_t tx_frames, rx_frames, tx_bytes, rx_bytes;
     uint32_t at_ok, at_err, rx_junk, tx_fail;
+    uint32_t back_ok, back_noack, back_noroute;   /* module delivery reports (AT+BACK=1) */
+    uint32_t resends, resend_giveup;              /* frames sent again after NO ACK / NO ROUTE */
 } e52_stats_t;
 
 esp_err_t e52_init(e52_rx_cb_t cb);

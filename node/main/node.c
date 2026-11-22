@@ -103,7 +103,7 @@ static void publish_status(void)
 {
     e52_stats_t es; e52_get_stats(&es);
     rtu_stats_t rs; rtu_get_stats(&rs);
-    char b[400], link[40] = "";
+    char b[440], link[40] = "";
     e52_route_t rt;                      /* our route to the gateway: next hop and its RSSI */
     if (e52_route_to(s_gw, &rt, 5000))
         snprintf(link, sizeof link, ",\"rssi\":%d,\"hop\":\"%04X\"", rt.rssi, rt.hop);
@@ -111,10 +111,10 @@ static void publish_status(void)
     snprintf(b, sizeof b,
              "{\"site\":\"%s\",\"name\":\"%s\",\"fw\":\"%s\",\"up\":%lu,\"addr\":\"%04X\","
              "\"rtu\":{\"ok\":%lu,\"exc\":%lu,\"timeout\":%lu,\"crc\":%lu},"
-             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu},\"pubs\":%lu%s}",
+             "\"radio\":{\"tx\":%lu,\"rx\":%lu,\"tx_fail\":%lu,\"noack\":%lu,\"resend\":%lu},\"pubs\":%lu%s}",
              g_cfg.site, g_cfg.name, NODE_FW_VERSION, (unsigned long)uptime_s(), g_cfg.e52_addr,
              (unsigned long)rs.ok, (unsigned long)rs.exceptions, (unsigned long)rs.timeouts, (unsigned long)rs.crc_err,
-             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)s_st.pubs, link);
+             (unsigned long)es.tx_frames, (unsigned long)es.rx_frames, (unsigned long)es.tx_fail, (unsigned long)es.back_noack, (unsigned long)es.resends, (unsigned long)s_st.pubs, link);
     xSemaphoreGive(g_cfg_lock);
     publish("status", b);
 }

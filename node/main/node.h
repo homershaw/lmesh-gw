@@ -3,7 +3,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#define NODE_FW_VERSION "0.3.0"
+#define NODE_FW_VERSION "0.4.0"
 
 typedef struct {
     uint32_t mb_reqs, mb_dups, mb_rtu_err;       /* mesh Modbus pass-through */

@@ -123,6 +123,9 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddStringToObject(o, "sta_ip", sta);
     cJSON_AddStringToObject(o, "ap_ip", ap);
     cJSON_AddNumberToObject(o, "rssi", rssi);
+    { e52_stats_t bs; e52_get_stats(&bs);
+      cJSON_AddNumberToObject(o, "back_ok", bs.back_ok); cJSON_AddNumberToObject(o, "back_noack", bs.back_noack); cJSON_AddNumberToObject(o, "back_noroute", bs.back_noroute);
+      cJSON_AddNumberToObject(o, "resends", bs.resends); cJSON_AddNumberToObject(o, "resend_giveup", bs.resend_giveup); }
     cJSON_AddBoolToObject(o, "mqtt", mqtt_gw_connected());
     cJSON_AddStringToObject(o, "mqtt_base", mqtt_gw_base());
     cJSON_AddNumberToObject(o, "mqtt_up", up);

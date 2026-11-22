@@ -43,7 +43,7 @@ static volatile uint32_t s_reqs, s_timeouts, s_clients, s_retries;
 /* retransmit interval: ~3x measured 1-hop RTT per air rate, + time for fragments */
 static int mb_retry_ms(size_t req_len)
 {
-    static const int base[] = { 900, 1200, 3500 };     /* rate 0 / 1 / 2 */
+    static const int base[] = { 900, 1200, 1800 };     /* rate 0 / 1 / 2; at 7k the airtime terms below add ~640 ms */
     int b = base[g_cfg.e52_rate > 2 ? 2 : g_cfg.e52_rate];
     return b + (int)e52_airtime_ms(req_len) + 2 * (int)e52_airtime_ms(E52_MAX_PAYLOAD);
 }
