@@ -15,6 +15,7 @@
 #include "node.h"
 #include "config.h"
 #include "rtu.h"
+#include "esp_system.h"
 #include "gps.h"
 #include "lmesh.h"
 #include "e52.h"
@@ -363,10 +364,11 @@ static void do_write(const char *json)
  * page or MQTT set/config. Radio, RS-485 and Wi-Fi settings stay local-only. */
 static void do_config(const char *json)
 {
-    static const char *allowed[] = { "site", "name", "poll_s", "poll" };
+    static const char *allowed[] = { "site", "name", "poll_s", "poll", "gps", "pos_s" };
+    bool was_gps = g_cfg.gps;
     cJSON *in = cJSON_Parse(json), *o = cJSON_CreateObject();
     int n = 0;
-    for (int i = 0; in && i < 4; i++) {
+    for (int i = 0; in && i < 6; i++) {
         cJSON *v = cJSON_DetachItemFromObject(in, allowed[i]);
         if (v) { cJSON_AddItemToObject(o, allowed[i], v); n++; }
     }
@@ -382,6 +384,11 @@ static void do_config(const char *json)
     xSemaphoreGive(g_cfg_lock);
     if (ok) { set_identity(); lmesh_announce(s_gw); node_poll_now(); }   /* new topic + schedule now */
     publish("config/ack", b);
+    if (ok && g_cfg.gps != was_gps) {                  /* the serial port changes hands: needs a restart */
+        ESP_LOGW(TAG, "GPS mode %s: restarting", g_cfg.gps ? "on" : "off");
+        vTaskDelay(pdMS_TO_TICKS(3000));
+        esp_restart();
+    }
 }
 
 /* "radio" {"rate":2,"in_s":30} or {"cancel":true}, from the gateway's mesh-rate change */
