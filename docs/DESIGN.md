@@ -210,7 +210,7 @@ From Ebyte's E52-400/900NW22S User Manual v1.4 plus our bench work.
 - **One frame at a time.** The module has a 5-entry send buffer. Sending too fast returns `OUT OF CACHE` and **the whole buffer is flushed**. Pacing frames by airtime alone lost the 2nd/3rd frame of back-to-back sends. The firmware now paces airtime + CSMA_RNG + ack time + 20 ms.
 - **`AT+BACK=1` reports every send's result:** `SUCCESS` / `NO ROUTE` / `NO ACK`. It is now always on. The driver counts the reports (`back_ok`, `back_noack`, `back_noroute` in the status API) and strips them from AT replies.
 - **The module retries by itself.** Receivers see duplicates (28 replies to 25 pings), and `NO ACK` mostly means the ack was missed, not the frame. Resending on `NO ACK` therefore collides with the peer's reply: it raised Modbus retries at rate 2 from 9/50 to 23/50. The resend code is in the driver but disabled (`RESEND_MAX 0`).
-- **About 1 packet in 6,000 arrives damaged** in a way the radio's checks do not catch (seen in a 1 MB transfer; probably a byte lost between an MCU and its module, which shortens the frame). Anything that must be exact needs its own checksum.
+- **Between 1 and 16 packets in 6,000 arrive damaged** in a way the radio's checks do not catch (seen in a 1 MB transfer; probably a byte lost between an MCU and its module, which shortens the frame). Anything that must be exact needs its own checksum.
 - **Routes:**
   - The first unicast to a new destination waits for route discovery: ~8 s at 21.875k, ~25 s at 7k.
   - Routes live in RAM; `AT+ROUTER_SAVE=1` keeps them across resets.
@@ -256,6 +256,7 @@ Firmware transfers:
 |---|---|
 | Gateway update over the LAN | 1.2 MB in 4 s; trial boot; confirmed after 8 s |
 | Node update over the mesh, 1 hop, rate 1 | 1,098,096 B in 46 min 32 s (~390 B/s), 135 packets repeated, 1 damaged packet caught |
+| Second node, same image (route started via a relay, ended direct) | 46 min 12 s, 119 packets repeated, 16 damaged packets caught |
 | Mesh-wide rate change, 2 nodes | ~40 s per change, 6 changes, all nodes confirmed each time |
 | Rate-change fallback (node alone on a wrong rate) | back on the old rate after 180 s |
 
@@ -301,7 +302,7 @@ The **"U" module variants** have a U.FL connector instead of a PCB antenna.
 Done since the first version of this document: link RSSI and next hop on the gateway and nodes, `AT+BACK=1` counters, node display, mesh-wide rate change, reliable 7 kbps, firmware updates (§11).
 
 Open:
-- **Failure-path tests of the firmware update:** resume after an interruption, and an actual rollback, have not been exercised on hardware. Node upload over its own Wi-Fi page is untested.
+- **Failure-path tests of the firmware update:** resume after an interruption, an actual rollback, and an update over a relayed (two-hop) route have not been exercised on hardware. Node upload over its own Wi-Fi page is untested.
 - **7 kbps hold-off:** 300 ms is safe but may be more than needed; a node on 128 ms did as well in one 25-read run and was ~250 ms faster per read. Needs a longer run.
 - **`radio` downlink from MQTT:** a node accepts a rate change published to `<base>/<site>/set/radio`. It heals itself after 180 s, but the command should be limited to the gateway's own page.
 - **Node 22B1's direct link:** it usually reaches the gateway through 4498 even at bench distance. Check its antenna path.
