@@ -62,3 +62,12 @@ Notes on topics and delivery:
 * **Large polls.** A poll that produces more than about 560 bytes of JSON goes out as several `data` messages. Each one is complete JSON with `site` and `t`.
 * **Writes.** These use FC5 for coils, FC6 for 16-bit values and FC16 for 32-bit values. The value is converted back through the point's scale and offset. Points read with FC2 or FC4 are read-only.
 * **Delivery is best effort, like MQTT QoS 0.** A lost uplink is replaced by the next poll.
+
+## Firmware updates
+
+The flash holds two firmware slots (`partitions.csv`). After one USB flash of a build with this layout, later updates need no cable:
+
+* **Over the node's Wi-Fi:** join `LMESH-NODE-xxxx`, open `http://192.168.4.1`, Settings → Firmware, choose `node/build/lmesh_node.bin`, **Upload and restart**. The file is checked (right project, right chip, intact) before anything changes.
+* **On trial:** the new firmware must reach the gateway over the mesh within 10 minutes. If it cannot, the node restarts into the previous firmware by itself. On a bench with no gateway, use **Keep it** on the node's page.
+
+The gateway works the same way from its own page (`build/lmesh_gw.bin`); it keeps a new firmware once someone logs in to its web page.

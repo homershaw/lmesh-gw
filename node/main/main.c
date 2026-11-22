@@ -9,6 +9,7 @@
 #include "e52.h"
 #include "rtu.h"
 #include "node.h"
+#include "ota.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_log.h"
@@ -18,6 +19,16 @@ static const char *TAG = "main";
 void wifi_start(void);
 void web_start(void);
 void display_start(void);
+
+/* A new node firmware is kept once it has reached the gateway over the mesh:
+ * that is the path the next update would have to come in by. On a bench with
+ * no gateway, "Keep it" on the node's own page confirms it by hand. */
+static bool ota_ok(void)
+{
+    node_stats_t ns;
+    node_get_stats(&ns);
+    return lmesh_ping(ns.gw_addr, 6000) >= 0;
+}
 
 /* program the E52 only when radio settings changed (writes module flash) */
 static uint32_t radio_hash(void)
@@ -71,6 +82,7 @@ void app_main(void)
         ESP_LOGE(TAG, "E52 not responding - check wiring (TX GPIO%d -> E52 RXD, RX GPIO%d <- E52 TXD)",
                  g_cfg.uart_tx, g_cfg.uart_rx);
     }
+    ota_watch(ota_ok, 600);
     ESP_LOGI(TAG, "LMESH node %s up: site '%s', mesh 0x%04X, gateway 0x%04X",
              NODE_FW_VERSION, g_cfg.site, g_cfg.e52_addr, g_cfg.gw_addr);
 }

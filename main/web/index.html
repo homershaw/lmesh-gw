@@ -126,6 +126,11 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
   <table><thead><tr><th>TCP unit</th><th>Mesh node (dec or 0x)</th><th>RS-485 unit (0 = same)</th><th></th></tr></thead><tbody id="mt"></tbody></table>
   <button class="btn sec" onclick="addMap()">Add row</button><button class="btn" onclick="saveMap()">Save map</button>
  </div>
+ <div class="card"><h3>Firmware</h3>
+  <p id="fw_info"></p>
+  <input type="file" id="fw_file" accept=".bin" style="width:auto"> <button class="btn warn" onclick="fwUpload()">Upload and restart</button>
+  <pre id="fw_out" style="display:none"></pre>
+ </div>
 </section>
 </main>
 <script>
@@ -142,7 +147,7 @@ tabs.forEach(([k,n])=>{const b=document.createElement('button');b.textContent=n;
 for(let c=52;c<=77;c++){const o=document.createElement('option');o.value=c;o.textContent=c+' – '+(850.125+c).toFixed(3)+' MHz';$('e52_channel').appendChild(o)}
 const hex=n=>'0x'+Number(n).toString(16).toUpperCase().padStart(4,'0');
 const age=s=>s<60?s+' s':s<3600?Math.floor(s/60)+' m':Math.floor(s/3600)+' h';
-function status(){api('/api/status').then(s=>{
+function status(){api('/api/status').then(s=>{if(s.slot)fwInfo(s);
  $('hid').textContent='ID '+s.id+' · fw '+s.fw;
  $('hst').innerHTML=(s.sta_ip!='-'?'<span class=ok>Wi-Fi '+s.sta_ip+'</span>':'<span class=bad>Wi-Fi off</span>')+' · '+(s.mqtt?'<span class=ok>MQTT</span>':'<span class=mu>MQTT off</span>');
  const kv={'Uptime':age(s.uptime),'Free heap':s.heap,'STA IP':s.sta_ip+(s.rssi?' ('+s.rssi+' dBm)':''),'AP IP':s.ap_ip,
@@ -166,6 +171,14 @@ function meshRate(){api('/api/mesh/rate',{rate:Number($('mr_rate').value),force:
 function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
  api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
 function atq(c){$('at').value=c;at();return false}
+function fwInfo(s){let t='Running '+s.fw+' from slot '+s.slot+'.';
+ if(s.ota_trial)t+=' <b>On trial:</b> goes back to the previous firmware in '+s.ota_left+' s unless confirmed. <a href="#" onclick="api(\'/api/ota/confirm\',{});return false">Keep it</a>';
+ $('fw_info').innerHTML=t}
+function fwUpload(){const f=$('fw_file').files[0],o=$('fw_out');if(!f)return;if(!confirm('Upload '+f.name+' ('+Math.round(f.size/1024)+' KB) and restart?'))return;
+ o.style.display='block';o.textContent='Uploading…';const x=new XMLHttpRequest();x.open('POST','/api/ota');
+ x.upload.onprogress=e=>{o.textContent='Uploading '+Math.round(100*e.loaded/e.total)+' %'};
+ x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Written and verified. Restarting… this page reloads in 20 s.':'Rejected: '+(r.err||x.status);if(r.ok)setTimeout(()=>location.reload(),20000)};
+ x.onerror=()=>{o.textContent='Upload failed (connection lost)'};x.send(f)}
 function reboot(){if(confirm('Reboot gateway?'))api('/api/reboot',{})}
 function mb(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
  const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};

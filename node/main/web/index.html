@@ -113,6 +113,11 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
   <button class="btn" onclick="save(netKeys)">Save (reboot to apply)</button>
   <button class="btn warn" onclick="reboot()">Reboot</button>
  </div>
+ <div class="card"><h3>Firmware</h3>
+  <p id="fw_info"></p>
+  <input type="file" id="fw_file" accept=".bin" style="width:auto"> <button class="btn warn" onclick="fwUpload()">Upload and restart</button>
+  <pre id="fw_out" style="display:none"></pre>
+ </div>
 </section>
 </main>
 <script>
@@ -133,6 +138,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 function status(){api('/api/status').then(s=>{
  $('hsite').textContent=s.site||'(no site ID set)';
  $('hid').textContent=(s.name?s.name+' · ':'')+'mesh '+s.addr+' · fw '+s.fw;
+ if(s.slot)fwInfo(s);
  $('hst').innerHTML=s.gw_seen>=0&&s.gw_seen<900?'<span class=ok>gateway '+s.gw+'</span>':'<span class=bad>gateway '+s.gw+' not heard</span>';
  const kv={'Uptime':age(s.uptime).replace(' ago',''),'Gateway heard':age(s.gw_seen),'Link to gateway':s.gw_hop?(s.gw_hop==s.gw?'direct':'via '+s.gw_hop)+', '+s.gw_rssi+' dBm':'no route yet','Last publish':age(s.last_pub),'Polls / publishes':s.polls+' / '+s.pubs+(s.pub_fail?' ('+s.pub_fail+' failed)':''),
  'RTU ok / exceptions':s.rtu_ok+' / '+s.rtu_exc,'RTU timeouts / bad':s.rtu_timeout+' / '+s.rtu_crc,'Mesh Modbus reqs (dups)':s.mb_reqs+' ('+s.mb_dups+')',
@@ -150,6 +156,14 @@ function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving
 function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
  api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
 function atq(c){$('at').value=c;at();return false}
+function fwInfo(s){let t='Running '+s.fw+' from slot '+s.slot+'.';
+ if(s.ota_trial)t+=' <b>On trial:</b> goes back to the previous firmware in '+s.ota_left+' s unless confirmed. <a href="#" onclick="api(\'/api/ota/confirm\',{});return false">Keep it</a>';
+ $('fw_info').innerHTML=t}
+function fwUpload(){const f=$('fw_file').files[0],o=$('fw_out');if(!f)return;if(!confirm('Upload '+f.name+' ('+Math.round(f.size/1024)+' KB) and restart?'))return;
+ o.style.display='block';o.textContent='Uploading…';const x=new XMLHttpRequest();x.open('POST','/api/ota');
+ x.upload.onprogress=e=>{o.textContent='Uploading '+Math.round(100*e.loaded/e.total)+' %'};
+ x.onload=()=>{let r={};try{r=JSON.parse(x.responseText)}catch(e){}o.textContent=r.ok?'Written and verified. Restarting… this page reloads in 20 s.':'Rejected: '+(r.err||x.status);if(r.ok)setTimeout(()=>location.reload(),20000)};
+ x.onerror=()=>{o.textContent='Upload failed (connection lost)'};x.send(f)}
 function reboot(){if(confirm('Reboot node?'))api('/api/reboot',{})}
 function rtu(){const vals=$('m_vals').value.split(',').map(s=>s.trim()).filter(s=>s).map(Number);
  const b={unit:Number($('m_unit').value),fc:Number($('m_fc').value),addr:Number($('m_addr').value),count:Number($('m_cnt').value),values:vals};

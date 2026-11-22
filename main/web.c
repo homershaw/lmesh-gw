@@ -4,6 +4,9 @@
 #include "gw.h"
 #include "config.h"
 #include "e52.h"
+#include "ota.h"
+
+static volatile bool s_web_seen;     /* someone logged in since boot: proof the gateway is reachable */
 #include "lmesh.h"
 #include "modbus_gw.h"
 #include "esp_http_server.h"
@@ -123,6 +126,9 @@ static esp_err_t h_status(httpd_req_t *r)
     cJSON_AddStringToObject(o, "sta_ip", sta);
     cJSON_AddStringToObject(o, "ap_ip", ap);
     cJSON_AddNumberToObject(o, "rssi", rssi);
+    cJSON_AddStringToObject(o, "slot", ota_slot());
+    cJSON_AddBoolToObject(o, "ota_trial", ota_pending());
+    cJSON_AddNumberToObject(o, "ota_left", ota_trial_left_s());
     { e52_stats_t bs; e52_get_stats(&bs);
       cJSON_AddNumberToObject(o, "back_ok", bs.back_ok); cJSON_AddNumberToObject(o, "back_noack", bs.back_noack); cJSON_AddNumberToObject(o, "back_noroute", bs.back_noroute);
       cJSON_AddNumberToObject(o, "resends", bs.resends); cJSON_AddNumberToObject(o, "resend_giveup", bs.resend_giveup); }
@@ -379,6 +385,7 @@ static void async_worker(void *arg)
 static esp_err_t h_sync(httpd_req_t *r)
 {
     if (!auth_ok(r)) return ESP_OK;
+    s_web_seen = true;
     return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
 }
 
@@ -402,6 +409,17 @@ static esp_err_t h_meshrate(httpd_req_t *r)
     cJSON_AddNumberToObject(o, "rate", g_cfg.e52_rate);
     cJSON_AddStringToObject(o, "log", log);
     return send_json(r, o);
+}
+
+/* ---- firmware update ---- */
+bool web_seen(void) { return s_web_seen; }
+
+static esp_err_t h_ota(httpd_req_t *r) { return ota_http_upload(r); }
+
+static esp_err_t h_ota_confirm(httpd_req_t *r)
+{
+    ota_confirm();
+    return httpd_resp_sendstr(r, "{\"ok\":true}");
 }
 
 static esp_err_t h_async(httpd_req_t *r)
@@ -452,6 +470,8 @@ void web_start(void)
         { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_async, .user_ctx = h_modbus },
         { .uri = "/api/mesh/rate", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_meshrate },
         { .uri = "/api/mesh/rate", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_meshrate },
+        { .uri = "/api/ota", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota },
+        { .uri = "/api/ota/confirm", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota_confirm },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);
