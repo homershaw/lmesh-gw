@@ -85,6 +85,7 @@ esp_err_t lmesh_discover(void);                            /* broadcast ping */
 
 int       lmesh_nodes(lmesh_node_t *out, int max);
 int       lmesh_node_count(void);
+uint32_t  lmesh_last_seen(uint16_t addr);                    /* uptime s of last frame from addr, 0 = never */
 /* MQTT topic level for a node: its site id if announced and unique, else 4 hex digits */
 void      lmesh_node_topic(uint16_t addr, char *out, size_t n);
 /* resolve a topic level (site id or 4 hex digits) to a node address */

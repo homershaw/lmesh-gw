@@ -379,6 +379,28 @@ static esp_err_t h_sync(httpd_req_t *r)
     return ((esp_err_t (*)(httpd_req_t *))r->user_ctx)(r);
 }
 
+const char *meshrate_start(int rate, bool force);
+int meshrate_status(const char **log);
+
+/* POST {"rate":2[,"force":true]} starts a mesh-wide rate change; GET reports progress */
+static esp_err_t h_meshrate(httpd_req_t *r)
+{
+    cJSON *o = cJSON_CreateObject();
+    if (r->method == HTTP_POST) {
+        cJSON *in = read_json(r);
+        cJSON *f = in ? cJSON_GetObjectItem(in, "force") : NULL;
+        const char *err = in ? meshrate_start(jint(in, "rate", -1), cJSON_IsTrue(f)) : "bad json";
+        cJSON_Delete(in);
+        if (err) cJSON_AddStringToObject(o, "err", err);
+    }
+    const char *log;
+    int st = meshrate_status(&log);
+    cJSON_AddNumberToObject(o, "state", st);
+    cJSON_AddNumberToObject(o, "rate", g_cfg.e52_rate);
+    cJSON_AddStringToObject(o, "log", log);
+    return send_json(r, o);
+}
+
 static esp_err_t h_async(httpd_req_t *r)
 {
     if (!auth_ok(r)) return ESP_OK;
@@ -425,6 +447,8 @@ void web_start(void)
         { .uri = "/api/node/config", .method = HTTP_POST, .handler = h_async, .user_ctx = h_node_cfg },
         { .uri = "/api/discover", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_discover },
         { .uri = "/api/modbus", .method = HTTP_POST, .handler = h_async, .user_ctx = h_modbus },
+        { .uri = "/api/mesh/rate", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_meshrate },
+        { .uri = "/api/mesh/rate", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_meshrate },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
     for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);

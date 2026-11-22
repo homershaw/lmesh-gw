@@ -68,6 +68,11 @@ pre{background:var(--bg);padding:10px;border-radius:6px;white-space:pre-wrap;max
    <div><label>CSMA random backoff ms</label><input id="e52_csma"></div>
   </div>
   <button class="btn" onclick="save(radioKeys)">Save</button><button class="btn warn" onclick="apply()">Save + apply to E52</button>
+  <p style="margin:14px 0 6px"><b>Change the air rate of the whole mesh.</b> Nodes and gateway switch together. A node that cannot find the gateway afterwards goes back on its own, and so does the gateway if nobody answers.</p>
+  <select id="mr_rate" style="width:auto"><option value="2">2 – 7 kbps (longest range)</option><option value="1">1 – 21.875 kbps</option><option value="0">0 – 62.5 kbps</option></select>
+  <label style="display:inline"><input id="mr_force" type="checkbox" style="width:auto"> leave behind nodes that do not answer</label>
+  <button class="btn warn" onclick="meshRate()">Change mesh rate</button>
+  <pre id="mr_out" style="display:none"></pre>
   <pre id="e_out" style="display:none"></pre>
  </div>
  <div class="card"><h3>E52 UART (reboot to apply)</h3>
@@ -156,6 +161,8 @@ function collect(keys){const o={};keys.forEach(k=>{let v=$(k).value;if(k=='mqtt_
 function save(keys){return api('/api/config',collect(keys)).then(r=>{alert(r.ok?r.note:'Save failed');loadCfg();return r})}
 function apply(){$('e_out').style.display='block';$('e_out').textContent='Saving and programming E52…';
  api('/api/config',collect(radioKeys)).then(()=>api('/api/e52/apply',{})).then(r=>{$('e_out').textContent=(r.ok?'OK\n':'Some commands failed\n')+r.log;loadCfg()})}
+function mrShow(r){$('mr_out').style.display='block';$('mr_out').textContent=(r.err?r.err+'\n':'')+r.log;if(r.state==1)setTimeout(()=>api('/api/mesh/rate').then(mrShow),2000);else loadCfg()}
+function meshRate(){api('/api/mesh/rate',{rate:Number($('mr_rate').value),force:$('mr_force').checked}).then(mrShow)}
 function at(){const c=$('at').value.trim();if(!c)return;$('at_out').textContent+='> '+c+'\n';
  api('/api/e52/at',{cmd:c}).then(r=>{$('at_out').textContent+=r.resp+'\n';$('at_out').scrollTop=1e9})}
 function atq(c){$('at').value=c;at();return false}

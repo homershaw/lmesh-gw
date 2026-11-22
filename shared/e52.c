@@ -418,6 +418,7 @@ bool e52_matches_cfg(void)
     if (!query_num("AT+SRC_ADDR=?", &v) || v != g_cfg.e52_addr) return false;
     if (!query_num("AT+CHANNEL=?", &v) || v != g_cfg.e52_channel) return false;
     if (!query_num("AT+PANID=?", &v) || v != g_cfg.e52_panid) return false;
+    if (!query_num("AT+RATE=?", &v) || v != g_cfg.e52_rate) return false;   /* e.g. reset during a trial rate change */
     return true;
 }
 

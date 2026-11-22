@@ -106,6 +106,15 @@ int lmesh_nodes(lmesh_node_t *out, int max)
 
 int lmesh_node_count(void) { return s_nnodes; }
 
+uint32_t lmesh_last_seen(uint16_t addr)
+{
+    uint32_t t = 0;
+    xSemaphoreTake(s_nodes_lock, portMAX_DELAY);
+    for (int i = 0; i < s_nnodes; i++) if (s_nodes[i].addr == addr) { t = s_nodes[i].last_seen_s; break; }
+    xSemaphoreGive(s_nodes_lock);
+    return t;
+}
+
 void lmesh_node_topic(uint16_t addr, char *out, size_t n)
 {
     snprintf(out, n, "%04X", addr);

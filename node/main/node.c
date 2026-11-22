@@ -32,6 +32,19 @@ static const char *TAG = "node";
 #define PUB_CHUNK      560          /* split data JSON so one message stays <= 3 radio frames */
 #define NOTE_POLL      (1u << 0)
 #define NOTE_ANNOUNCE  (1u << 1)
+#define NOTE_WAKE      (1u << 2)
+
+/* Trial change of the air rate, ordered by the gateway ("radio" downlink).
+ * The new rate is kept only if the gateway is heard on it within TRIAL_S;
+ * otherwise the node goes back, so a failed change cannot strand it.
+ * The config is saved only after that proof. If the node resets mid-trial,
+ * boot sees module rate != config and reprograms the old rate. */
+#define TRIAL_S        180      /* must match the gateway (meshrate.c) */
+static struct {
+    volatile uint8_t state;     /* 0 none, 1 scheduled, 2 on trial */
+    uint8_t new_rate, old_rate;
+    uint32_t at_s, switched_s, deadline_s, next_ann_s;
+} s_trial;
 
 static node_stats_t s_st;
 static TaskHandle_t s_poll_task;
@@ -180,6 +193,36 @@ static void poll_once(void)
     free(b);
 }
 
+static void trial_step(uint32_t now)
+{
+    if (s_trial.state == 1 && now >= s_trial.at_s) {
+        s_trial.old_rate = g_cfg.e52_rate;
+        g_cfg.e52_rate = s_trial.new_rate;
+        ESP_LOGW(TAG, "air rate %u -> %u on trial", s_trial.old_rate, s_trial.new_rate);
+        e52_apply_config(NULL, 0);
+        s_trial.switched_s = uptime_s();
+        s_trial.deadline_s = s_trial.switched_s + TRIAL_S;
+        s_trial.next_ann_s = s_trial.switched_s + 3;
+        s_trial.state = 2;
+    } else if (s_trial.state == 2) {
+        if (lmesh_last_seen(s_gw) > s_trial.switched_s) {
+            s_trial.state = 0;
+            bool saved = cfg_save();
+            ESP_LOGW(TAG, "gateway heard at rate %u: keeping it%s", g_cfg.e52_rate, saved ? "" : " (SAVE FAILED)");
+            publish_status();
+        } else if (now >= s_trial.deadline_s) {
+            ESP_LOGW(TAG, "gateway not heard at rate %u: back to rate %u", g_cfg.e52_rate, s_trial.old_rate);
+            g_cfg.e52_rate = s_trial.old_rate;
+            e52_apply_config(NULL, 0);
+            s_trial.state = 0;
+            lmesh_announce(s_gw);
+        } else if (now >= s_trial.next_ann_s) {
+            lmesh_announce(s_gw);                       /* lets the gateway find us sooner */
+            s_trial.next_ann_s = now + 20;
+        }
+    }
+}
+
 static void poll_task(void *a)
 {
     uint32_t next_poll = uptime_s() + 5, next_ann = uptime_s() + REANNOUNCE_S, next_status = uptime_s() + 20;
@@ -187,8 +230,11 @@ static void poll_task(void *a)
         uint32_t now = uptime_s(), wake = next_ann < next_status ? next_ann : next_status;
         uint16_t ps = g_cfg.poll_s;
         if (ps && next_poll < wake) wake = next_poll;
+        if (s_trial.state && wake > now + 2) wake = now + 2;
         uint32_t note = 0;
         xTaskNotifyWait(0, UINT32_MAX, &note, pdMS_TO_TICKS(wake > now ? (wake - now) * 1000 : 0));
+        now = uptime_s();
+        trial_step(now);
         now = uptime_s();
         if (note & NOTE_ANNOUNCE) {
             vTaskDelay(pdMS_TO_TICKS(200 + esp_random() % 2000));   /* don't all answer at once */
@@ -311,6 +357,34 @@ static void do_config(const char *json)
     publish("config/ack", b);
 }
 
+/* "radio" {"rate":2,"in_s":30} or {"cancel":true}, from the gateway's mesh-rate change */
+static void do_radio(const char *json)
+{
+    cJSON *o = cJSON_Parse(json);
+    cJSON *r = o ? cJSON_GetObjectItem(o, "rate") : NULL, *in = o ? cJSON_GetObjectItem(o, "in_s") : NULL;
+    const char *err = NULL;
+    if (o && cJSON_IsTrue(cJSON_GetObjectItem(o, "cancel"))) {
+        if (s_trial.state == 1) s_trial.state = 0;
+    } else if (!cJSON_IsNumber(r) || r->valueint < 0 || r->valueint > 2) err = "bad rate";
+    else if (s_trial.state == 2) err = "trial running";
+    else if (r->valueint == g_cfg.e52_rate) s_trial.state = 0;
+    else {
+        int d = cJSON_IsNumber(in) ? in->valueint : 20;
+        if (d < 3) d = 3;
+        if (d > 900) d = 900;
+        s_trial.state = 0;
+        s_trial.new_rate = (uint8_t)r->valueint;
+        s_trial.at_s = uptime_s() + d;
+        s_trial.state = 1;
+        ESP_LOGW(TAG, "air rate change to %u in %d s", s_trial.new_rate, d);
+        if (s_poll_task) xTaskNotify(s_poll_task, NOTE_WAKE, eSetBits);
+    }
+    cJSON_Delete(o);
+    char b[80];
+    snprintf(b, sizeof b, "{\"ok\":%s%s%s%s}", err ? "false" : "true", err ? ",\"err\":\"" : "", err ? err : "", err ? "\"" : "");
+    publish("radio/ack", b);
+}
+
 static void do_downlink(const work_t *w)
 {
     const uint8_t *z = memchr(w->data, 0, w->len);
@@ -325,6 +399,7 @@ static void do_downlink(const work_t *w)
     else if (!strcmp(sub, "poll")) node_poll_now();
     else if (!strcmp(sub, "status")) publish_status();
     else if (!strcmp(sub, "config")) do_config(payload);
+    else if (!strcmp(sub, "radio")) do_radio(payload);
     else ESP_LOGW(TAG, "unknown downlink '%s'", sub);
 }
 
