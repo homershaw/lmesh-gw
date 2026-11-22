@@ -61,12 +61,15 @@ flowchart TB
 
 | Function | Detail |
 |---|---|
-| Modbus TCP :502 | Unit ID → node via the Unit Map (unmapped unit N goes to mesh node N). One transaction per node at a time. Retransmits the same seq after ~3× a normal round trip (1.2 s base at rate 1). Gives up at `mb_timeout_ms` (6 s) with exception 0x0B. |
+| Modbus TCP :502 | Unit ID → node via the Unit Map (unmapped unit N goes to mesh node N). One transaction per node at a time. Retransmits the same seq after ~3× a normal round trip (1.2 s base at rate 1, about 2.4 s in total at rate 2). Gives up at `mb_timeout_ms` (6 s) with exception 0x0B. |
 | MQTT bridge | Publishes node uplinks as `<base>/<site or NODE>/<sub>`. Subscribes `<base>/+/set/#` for downlinks. `gw/status` (LWT, retained), `gw/stats` and `gw/nodes` every 60 s. Starts in AP-only mode as well, for a broker on the AP side. |
 | Downlinks | Each one is acknowledged by the node and resent up to 3× with the same seq (`gw_downlink()`). |
 | Web UI | Status, Nodes (site column with ✎ editor, ping, discover), Modbus test, Radio/E52 apply plus AT console, Wi-Fi/MQTT, Unit Map. HTTP Basic auth, user `admin`; the password is `web_pass`, else the AP password. Ping, Modbus, AT and apply run on 2 worker tasks so the page stays responsive. |
 | Wi-Fi | AP `LMESH-GW-xxxx` at 192.168.4.1 always. STA when `sta_ssid` is set (then the AP follows the STA channel). Power save off, 8 clients max. Bench: STA joined home LAN as 192.168.1.22. |
-| Boot | Programs the E52 if the settings hash changed **or** the module's SRC_ADDR/CHANNEL/PANID differ from config (new or swapped module), then re-sends HEAD/BACK/CSMA. |
+| Boot | Programs the E52 if the settings hash changed **or** the module's SRC_ADDR/CHANNEL/PANID/RATE differ from config (new or swapped module), then re-sends HEAD/BACK/CSMA. |
+| Link column | The Nodes page shows each node's next hop and RSSI from the E52 route table (cached 10 s). |
+| Mesh rate | Radio page: change the air rate of every node and the gateway together, with fallback (§4). |
+| Firmware | Own update from the web page; stores node firmware and sends it over the mesh (§11). |
 
 ## 3. Field node
 
@@ -80,8 +83,14 @@ Hardware as built: see [node-wiring.svg](node-wiring.svg).
 | D5 | 23 | E52 TXD (UART1 RX) |
 | D6 | 16 | E52 NRST (optional) |
 | D1 | 1 | spare: DE if a non-auto-direction transceiver is used |
+| D9 | 20 | OLED SDA (optional display; the first build needed SDA/SCL swapped, check with the bus scan in the boot log) |
+| D10 | 18 | OLED SCL |
 
 Firmware (`node/`):
+- **Status display (optional).** 128×64 I2C OLED at 0x3C/0x3D, SH1106 by default (the 1.3" modules), SSD1306 selectable. Hot-pluggable. Shows site, mesh address and frequency, RSSI and next hop towards the gateway, RTU counters, last publish, and the poll values (six per page, 10 s per page). During a mesh firmware update line 5 shows the percentage.
+- **Link report.** `rssi` and `hop` of the node's route to the gateway, plus `noack` and `resend` counters, in the status message and on the node's page.
+- **Air-rate change on trial.** See §4, `radio` downlink.
+- **Firmware update** over the node's Wi-Fi page or over the mesh, with trial boot and rollback. See §11.
 - **Mesh Modbus pass-through.** `[unit][PDU]` on mesh port 502 → Modbus RTU master on RS-485 → reply with the same seq. A repeated seq gets the cached reply (it is not re-run on the bus). An RTU timeout or CRC error answers exception 0x0B immediately.
 - **Poll and push.** A poll list (name, unit, FC1–4, address, type u16/s16/u32/s32/f32 plus word-swapped variants, scale, offset) is read every `poll_s`. The node publishes one JSON message per poll, `<base>/<site>/data` = `{"site":…,"t":uptime,"name":value,…}`. A failed read becomes `null` plus `_err`. Messages over ~560 bytes are split into self-contained chunks.
 - **Downlinks.**
@@ -119,6 +128,18 @@ b3..4 src port BE   b5..6 dst port BE   b7.. payload (≤193 B per fragment)
 | 1883 | node → gw | `subtopic\0payload` → MQTT `<base>/<site>/<subtopic>` | best effort (next poll replaces a lost one) |
 | 1884 | gw → node | `subtopic\0payload` from MQTT `…/set/<subtopic>` | node acks with an empty UDP datagram (same seq); gateway resends ×3 |
 | 5252 (gw) | LAN ⇄ node | UDP bridge to `10.52.<hi>.<lo>` | none |
+| 69 | gw ⇄ node | firmware transfer, `shared/fwproto.h` | every packet acked with the next expected offset; CRC16 per packet, CRC32 over the image |
+
+**Timing rule: wait after receiving before transmitting.** When a frame arrives, the two E52s are still exchanging their MAC ack. A reply written to the module inside that window is lost. The driver holds off 15 / 40 / 300 ms at rate 0 / 1 / 2 (`rx_holdoff_ms()` in `shared/e52.c`). Without it, rate 2 lost 37 % of pings.
+
+**`radio` downlink: mesh-wide air-rate change with fallback** (`main/meshrate.c`, node `trial_step()`):
+1. The gateway sends every node `{"rate":N,"in_s":S}`, with S chosen so all nodes switch at the same moment. Each must ack; if one does not, the others are cancelled and nothing changes (unless forced).
+2. Everyone switches. The gateway pings the nodes at the new rate.
+3. A node keeps the new rate, and saves it, only once it hears the gateway on it. After 180 s without the gateway it returns to the old rate.
+4. If no node answers, the gateway returns too.
+5. A node reset mid-trial boots on its configured rate, because `e52_matches_cfg()` now also compares RATE.
+
+Known gap: a node that was off during a change stays on the old rate, out of reach, until the mesh is switched back (use the "leave behind" option to do that).
 
 The ANNOUNCE payload is `name\0kind\0fw\0[site\0]`.
 - The gateway announces itself as kind `gateway` (broadcast) on boot.
@@ -187,11 +208,14 @@ From Ebyte's E52-400/900NW22S User Manual v1.4 plus our bench work.
   - These look like LoRa BW 500 kHz at SF5/SF7/SF9: 62.5k and 21.875k match SF5/SF7 exactly. The Wio-E5 sniffer receives rate 1 as SF7/BW500 with the private sync word (NET=OFF).
 - **RX frames** with `AT+HEAD=1`: `C1|C2|C3|C4, len, PAN(LE), src(LE), dst(LE), data`.
 - **One frame at a time.** The module has a 5-entry send buffer. Sending too fast returns `OUT OF CACHE` and **the whole buffer is flushed**. Pacing frames by airtime alone lost the 2nd/3rd frame of back-to-back sends. The firmware now paces airtime + CSMA_RNG + ack time + 20 ms.
-- **`AT+BACK=1` reports every send's result:** `SUCCESS` / `NO ROUTE` / `NO ACK`. We run BACK=0 today. Turning it on would give exact TX-done timing and per-hop delivery results.
+- **`AT+BACK=1` reports every send's result:** `SUCCESS` / `NO ROUTE` / `NO ACK`. It is now always on. The driver counts the reports (`back_ok`, `back_noack`, `back_noroute` in the status API) and strips them from AT replies.
+- **The module retries by itself.** Receivers see duplicates (28 replies to 25 pings), and `NO ACK` mostly means the ack was missed, not the frame. Resending on `NO ACK` therefore collides with the peer's reply: it raised Modbus retries at rate 2 from 9/50 to 23/50. The resend code is in the driver but disabled (`RESEND_MAX 0`).
+- **About 1 packet in 6,000 arrives damaged** in a way the radio's checks do not catch (seen in a 1 MB transfer; probably a byte lost between an MCU and its module, which shortens the frame). Anything that must be exact needs its own checksum.
 - **Routes:**
   - The first unicast to a new destination waits for route discovery: ~8 s at 21.875k, ~25 s at 7k.
   - Routes live in RAM; `AT+ROUTER_SAVE=1` keeps them across resets.
-  - `AT+ROUTER_CLR=?` / `ROUTER_READ=?` list destination, next hop, score and **RSSI**. That's the data for a mesh map.
+  - `AT+ROUTER_READ=?` lists destination, next hop, score and **RSSI**. The driver caches it (`e52_routes()`); the gateway's Nodes page shows it in the Link column and each node reports its own route to the gateway.
+  - On a relayed route the RSSI seems to describe the far hop, not the first one (gateway showed −19 dBm for a node behind a −45 dBm relay). Trust it on direct links.
 - **Timeouts:**
   - Default ACK and route timeouts are 2.5 / 5 / 15 s by rate; about 5 hops and ~50 devices are supported at defaults.
   - Broadcasts are de-duplicated for 15 / 30 / 60 s.
@@ -217,6 +241,26 @@ From Ebyte's E52-400/900NW22S User Manual v1.4 plus our bench work.
 | 2-fragment uplink after downlink ack | 0/4 before pacing fix → 8/10 after (rest = RF loss) |
 | Acked downlinks | 10/10 |
 
+Two XIAO nodes with RTUs, bench, 25–50 Modbus reads of 4 registers per node (2026-11-21):
+
+| Air rate | Success | Median | Slowest | Notes |
+|---|---|---|---|---|
+| 0 (62.5k) | 50/50 | ~255 ms | 1.35 s | Only ~60 ms faster than rate 1: most of the time is fixed overhead. Not worth the 6 dB. |
+| 1 (21.9k) | 100/100 | ~320 ms | 0.5 s | No retries. |
+| 2 (7k), before fixes | 114/120 | ~700 ms | 5.5 s | 23 % of reads retried, 37 % of pings lost. |
+| 2 (7k), after fixes | 50/50 | ~0.9–1.1 s | 2.2 s | No retries. Fixes: RX→TX hold-off 300 ms, retry interval ~2.4 s, no resend on NO ACK. |
+
+Firmware transfers:
+
+| Transfer | Result |
+|---|---|
+| Gateway update over the LAN | 1.2 MB in 4 s; trial boot; confirmed after 8 s |
+| Node update over the mesh, 1 hop, rate 1 | 1,098,096 B in 46 min 32 s (~390 B/s), 135 packets repeated, 1 damaged packet caught |
+| Mesh-wide rate change, 2 nodes | ~40 s per change, 6 changes, all nodes confirmed each time |
+| Rate-change fallback (node alone on a wrong rate) | back on the old rate after 180 s |
+
+Capacity estimate (one shared channel, kept under ~20 % busy; not measured): about 40 nodes at a 30 s poll on rate 1, about 12 on rate 2; ten times that at 5-minute polls. Each relay hop costs the airtime again.
+
 ## 8. Bring-up lessons
 
 1. **E52 -TB board on an MCU:** pull both TXD/RXD jumpers and wire to the module side. Wires on both pins of one jumper loop TX to RX, and the firmware reports "link is an echo".
@@ -228,6 +272,13 @@ From Ebyte's E52-400/900NW22S User Manual v1.4 plus our bench work.
 7. **A broker on the laptop:** Mosquitto's stock config listens on localhost only. Add `listener 1883` (plus auth in the field) and a firewall rule scoped to the gateway's subnet.
 8. **While the laptop is on the gateway AP, it has no internet.**
 9. **Windows build:** idf.py refuses MSYS. The `idf.cmd` wrapper clears `MSYSTEM` and sets the IDF environment. The S31 needs `--preview`. Kconfig changes need `idf.py reconfigure`.
+10. **A node that goes silent after being moved:** check power wiring first. On the second node it was an intermittent 5 V wire, then a cold ground joint. If the E52 still routes for others (visible in the gateway's route table) but the node does not answer pings, the C6 is the part that is down.
+11. **The node's Wi-Fi name uses the MAC, not the mesh address** (`LMESH-NODE-A0B0` is mesh node 22B1).
+12. **Unit Map, third field:** it is the RTU's address on the RS-485 bus. 0 means "same as the TCP unit", which is wrong whenever the two differ and shows up as exception 0x0B.
+13. **A laptop that changes address breaks MQTT.** The gateway publishes to a fixed broker address; reserve the laptop's address in the router.
+14. **Windows can run out of TCP ports** (thousands of sockets stuck closing) and then nothing connects, including to the gateway. A reboot clears it.
+15. **OLED modules:** the 1.3" ones are SH1106, not SSD1306 (2-pixel shift and a stripe at the edge if driven as SSD1306, and they need different power settings). Missing pixel rows that stay put are a damaged panel.
+16. **Don't unplug a node during a rate change.** It comes back on the old rate and is unreachable until the mesh returns to it.
 
 ## 9. Hardware choices
 
@@ -247,14 +298,72 @@ The **"U" module variants** have a U.FL connector instead of a PCB antenna.
 
 ## 10. Open items and roadmap
 
-- **Mesh map:** collect `AT+ROUTER_CLR=?` from the gateway and the nodes (in status) and draw links with RSSI and hops on the gateway page.
-- **Link quality page:** per-node RTT, loss %, retries over time, ping sweep, and a site-survey mode for phone walks.
-- **`AT+BACK=1`:** use SUCCESS/NO ACK for exact pacing and delivery stats.
+Done since the first version of this document: link RSSI and next hop on the gateway and nodes, `AT+BACK=1` counters, node display, mesh-wide rate change, reliable 7 kbps, firmware updates (§11).
+
+Open:
+- **Failure-path tests of the firmware update:** resume after an interruption, and an actual rollback, have not been exercised on hardware. Node upload over its own Wi-Fi page is untested.
+- **7 kbps hold-off:** 300 ms is safe but may be more than needed; a node on 128 ms did as well in one 25-read run and was ~250 ms faster per read. Needs a longer run.
+- **`radio` downlink from MQTT:** a node accepts a rate change published to `<base>/<site>/set/radio`. It heals itself after 180 s, but the command should be limited to the gateway's own page.
+- **Node 22B1's direct link:** it usually reaches the gateway through 4498 even at bench distance. Check its antenna path.
+- **OLED wiring:** confirm whether SDA is on D9 or D10 on the working build and fix the tables.
+- **Mesh map and link-quality page:** the data now exists (routes, RSSI, ack counters); the page does not.
+- **Faster mesh updates:** stop-and-wait gives ~390 B/s. Sending two or three packets per ack, or compressing the image (~40 % smaller), would cut the 47 minutes.
+- **Send on change** for poll data, to stretch channel capacity.
+- **Gateway display:** same OLED on the S31 once free pins are known.
 - **Network key:** set your own `AT+KEY` and a non-default PAN, managed from the gateway and node config.
-- **Wio-E5 RF instrument:**
-  - stock firmware gives a sniffer (RSSI/SNR, src/dst/seq) and a carrier generator
-  - custom firmware could sweep RSSI over 902–928 MHz for a spectrum analyzer and help pick channels
+- **Wio-E5 RF instrument:** sniffer and carrier generator on stock firmware; a 902–928 MHz RSSI sweep would need custom firmware.
+- **GPS survey node:** see §12.
 - **DHCP leases:** persisting them would need a patched IDF dhcpserver; not done.
 - **Node with DE-pin transceivers:** use UART RS-485 half-duplex mode with RTS on D1.
 - **Node board** on the -1U modules and the daughter-board radio section.
-- **Wio-E5 / own-mesh alternative to the E52:** possible, a larger project. Revisit if moving away from Ebyte.
+
+## 11. Firmware updates
+
+Both projects use the same flash layout (`partitions.csv`): NVS at its original place, then two app slots of 1.875 MB (`ota_0`, `ota_1`). A board needs one USB flash with this layout; after that no cable.
+
+| Path | How | Measured |
+|---|---|---|
+| Gateway, over LAN or its AP | Firmware card on the gateway page, `build/lmesh_gw.bin` | 1.2 MB in 4 s |
+| Node, over its own AP | Firmware card on the node page, `node/build/lmesh_node.bin` | untested |
+| Node, over the mesh | "Node firmware over the mesh" card on the gateway page | 1.07 MB in 46.5 min, 1 hop, rate 1 |
+
+Common rules (`shared/ota.c`):
+- The upload is checked before anything changes: ESP image magic, project name (a gateway file is refused by a node and the reverse), then the IDF image verification.
+- The new firmware boots **on trial**. The gateway keeps it once someone logs in to its web page. A node keeps it once it can ping the gateway. No proof in 10 minutes restarts into the previous firmware (bootloader rollback). A node on a bench with no gateway can be confirmed by hand ("Keep it").
+
+Over the mesh (`shared/fwproto.h`, `main/nodefw.c`, `node/main/fwup.c`):
+- The node image is stored once in the **gateway's idle firmware slot**. A gateway update overwrites it, so store it again afterwards.
+- One node at a time. Each 182-byte packet carries a CRC16; the node answers with the next offset it expects, which handles loss, duplicates and resume. The whole image is checked by CRC32, then by the IDF verification, before the node switches.
+- An interrupted transfer resumes when started again, provided the node has not restarted in between.
+- Needs node firmware 0.6.1 or newer on the receiving node.
+
+The E52 modules run Ebyte's firmware and are not updated by any of this.
+
+## 12. Planned: GPS survey node
+
+Goal: carry a node around, log position with signal strength, and compute path loss against distance from the gateway.
+
+**Module.** The boards marked NEO6MV2 carry a u-blox NEO-6M: 3.3–5 V supply, about 45 mA, NMEA sentences at 9600 baud once a second, 3.3 V logic. Only its TX pin is needed. Expect a first fix to take from half a minute outdoors to several minutes; indoors it may never fix. (From memory of the common module; check the board in hand.)
+
+**Where it connects.** The C6's two UARTs are taken by RS-485 and the E52. Options:
+
+| Option | Wiring | Trade-off |
+|---|---|---|
+| A. Survey build without an RTU | GPS TX → D3 (UART0 RX, the RS-485 receive pin) | Simplest and most robust. A mobile node has no RTU anyway. One setting switches UART0 between RS-485 and GPS. |
+| B. GPS as well as an RTU | GPS TX → a spare pin (D0, D1, D7 or D8), received in software at 9600 baud | Keeps the RTU. More code, and timing has to share the CPU with Wi-Fi. |
+| C. GPS on the C6's low-power UART | fixed pins, on the XIAO's underside pads | Needs soldering to the back; pin numbers to be confirmed against Seeed's pinout. |
+
+Recommendation: A for the survey unit.
+
+**Data.** A new message `<base>/<site>/pos`, for example every 10 s while moving:
+`{"lat":51.04512,"lon":-114.06301,"alt":1084,"sats":9,"hdop":1.1,"utc":"2026-11-22T17:03:10Z","rssi":-87,"hop":"0001"}`.
+The gateway adds what it measured for that packet (its own RSSI of the node) and the distance from its configured position.
+
+**Path loss.** With both ends known: `loss = TX power + antenna gains − RSSI`, compared with free space at 915 MHz, `91.7 + 20·log10(km)` dB. The difference is the excess loss from terrain and obstructions, which is the number worth mapping.
+
+**Display.** On the gateway page: a plot of the track around the gateway coloured by signal, plus a loss-versus-distance chart. It can draw without internet; map tiles would need a connection. The same points go to MQTT, so any mapping tool can use them.
+
+**Limits to know beforehand.**
+- The E52 reports RSSI as whole dBm per route, updated only when traffic flows, and on relayed routes it seems to describe the far hop. For clean survey data the unit should be in direct range of the gateway, or record which node it heard.
+- A NEO-6M position is good to a few metres: fine for path loss at hundreds of metres, poor below about 50 m.
+- GPS time would also give the poll data real timestamps; today `t` is uptime.
