@@ -25,6 +25,12 @@ static gps_fix_t s_fix;
 static uint32_t s_fix_at_s, s_any_at_s;
 static portMUX_TYPE s_mux = portMUX_INITIALIZER_UNLOCKED;
 
+/* the latest sentence of each kind as received, for fault finding: GGA, RMC, GSV 1..6 */
+#define RAW_N 8
+static char s_raw[RAW_N][84];
+static uint32_t s_bytes, s_badsum;          /* everything that arrived on the pin; sentences that failed the checksum */
+static char s_tail[49];                     /* the last characters received, whatever they were */
+
 static uint32_t up_s(void) { return (uint32_t)(esp_timer_get_time() / 1000000LL); }
 
 /* "ddmm.mmmm" / "dddmm.mmmm" -> degrees */
@@ -59,7 +65,23 @@ static int split(char *s, char **f, int max)
 
 static void sentence(char *s)
 {
-    if (!checksum_ok(s)) return;
+    if (!checksum_ok(s)) { s_badsum++; return; }
+    if (strlen(s) > 8) {
+        int slot = -1;
+        if (!strncmp(s + 3, "GGA", 3)) slot = 0;
+        else if (!strncmp(s + 3, "RMC", 3)) slot = 1;
+        else if (!strncmp(s + 3, "GSV", 3) && s[2] == 'P') {
+            const char *c = strchr(s + 7, ',');           /* $GPGSV,total,THIS,... */
+            int k = c ? atoi(c + 1) : 0;
+            if (k == 1) for (int i = 3; i < RAW_N; i++) s_raw[i][0] = 0;
+            if (k >= 1 && k <= RAW_N - 2) slot = 1 + k;
+        }
+        if (slot >= 0) {
+            portENTER_CRITICAL(&s_mux);
+            strlcpy(s_raw[slot], s, sizeof s_raw[slot]);
+            portEXIT_CRITICAL(&s_mux);
+        }
+    }
     char *f[24];
     int n = split(s, f, 24);
     if (strlen(f[0]) < 6) return;
@@ -120,6 +142,9 @@ static void task(void *arg)
         int n = uart_read_bytes(UARTN, buf, sizeof buf, pdMS_TO_TICKS(200));
         for (int i = 0; i < n; i++) {
             char c = (char)buf[i];
+            s_bytes++;
+            memmove(s_tail, s_tail + 1, sizeof s_tail - 2);
+            s_tail[sizeof s_tail - 2] = (c >= 32 && c < 127) ? c : '.';
             if (c == '$') len = 0;
             if (c == '\r' || c == '\n') {
                 if (len > 6) { line[len] = 0; sentence(line); }
@@ -142,12 +167,30 @@ bool gps_get(gps_fix_t *out)
     return alive;
 }
 
+/* The receiver's own words: latest GGA, RMC and GSV group, one per line. */
+size_t gps_raw(char *out, size_t max)
+{
+    size_t l = 0;
+    out[0] = 0;
+    if (max > 140) l = snprintf(out, max, "bytes received %lu, sentences ok %lu, bad checksum %lu\nlast characters: %s\n",
+                                (unsigned long)s_bytes, (unsigned long)s_fix.sentences, (unsigned long)s_badsum, s_tail);
+    for (int i = 0; i < RAW_N; i++) {
+        char line[84];
+        portENTER_CRITICAL(&s_mux);
+        strlcpy(line, s_raw[i], sizeof line);
+        portEXIT_CRITICAL(&s_mux);
+        if (line[0] && l + strlen(line) + 2 < max) l += snprintf(out + l, max - l, "%s\n", line);
+    }
+    return l;
+}
+
 esp_err_t gps_start(void)
 {
     uart_config_t u = {
         .baud_rate = 9600, .data_bits = UART_DATA_8_BITS, .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1, .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, .source_clk = UART_SCLK_DEFAULT,
     };
+    memset(s_tail, ' ', sizeof s_tail - 1);
     esp_err_t e = uart_driver_install(UARTN, 1024, 0, 0, NULL, 0);
     if (e == ESP_OK) e = uart_param_config(UARTN, &u);
     if (e == ESP_OK) e = uart_set_pin(UARTN, UART_PIN_NO_CHANGE, CONFIG_LMN_RS485_RX_GPIO, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);

@@ -9,6 +9,7 @@
 #include "ota.h"
 #include "gps.h"
 #include "esp_http_server.h"
+#include "esp_wifi.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "esp_system.h"
@@ -310,6 +311,56 @@ static esp_err_t h_ota_confirm(httpd_req_t *r)
 
 static void reboot_task(void *a) { vTaskDelay(pdMS_TO_TICKS(500)); esp_restart(); }
 
+/* Fault-finding test: is this board's own Wi-Fi deafening the GPS receiver?
+ * POST /api/gps/quiet logs the GPS signal for 30 s with Wi-Fi on, switches
+ * Wi-Fi off for QUIET_S seconds while logging, then switches it back on.
+ * The log is appended to GET /api/gps. The page is unreachable meanwhile. */
+#define QUIET_S 180
+static char s_quiet[1500];
+static bool s_quiet_busy;
+
+static void quiet_log(size_t *l, const char *what, int t)
+{
+    gps_fix_t g;
+    gps_get(&g);
+    if (*l + 60 < sizeof s_quiet)
+        *l += snprintf(s_quiet + *l, sizeof s_quiet - *l, "%s %3ds: used %u heard %u best %u dB-Hz%s\n", what, t, g.sats, g.heard, g.snr, g.fix ? " FIX" : "");
+}
+
+static void quiet_task(void *arg)
+{
+    size_t l = 0;
+    s_quiet[0] = 0;
+    for (int t = 0; t <= 30; t += 10) { quiet_log(&l, "wifi on ", t); vTaskDelay(pdMS_TO_TICKS(10000)); }
+    esp_wifi_stop();
+    for (int t = 10; t <= QUIET_S; t += 10) { vTaskDelay(pdMS_TO_TICKS(10000)); quiet_log(&l, "wifi OFF", t); }
+    esp_wifi_start();
+    s_quiet_busy = false;
+    vTaskDelete(NULL);
+}
+
+static esp_err_t h_gps_quiet(httpd_req_t *r)
+{
+    if (s_quiet_busy) return httpd_resp_sendstr(r, "{\"ok\":false,\"err\":\"already running\"}");
+    s_quiet_busy = true;
+    xTaskCreate(quiet_task, "gpsquiet", 3072, NULL, 4, NULL);
+    return httpd_resp_sendstr(r, "{\"ok\":true,\"note\":\"Wi-Fi goes off in 40 s for 3 minutes; read /api/gps afterwards\"}");
+}
+
+/* GET /api/gps: what the GPS receiver is saying, as plain text */
+static esp_err_t h_gps(httpd_req_t *r)
+{
+    char *b = malloc(720 + sizeof s_quiet);
+    if (!b) return httpd_resp_send_err(r, HTTPD_500_INTERNAL_SERVER_ERROR, "no mem");
+    gps_raw(b, 720);
+    if (!g_cfg.gps) strcpy(b, "GPS mode is off\n");
+    strcat(b, s_quiet);
+    httpd_resp_set_type(r, "text/plain");
+    esp_err_t e = httpd_resp_sendstr(r, b);
+    free(b);
+    return e;
+}
+
 static esp_err_t h_reboot(httpd_req_t *r)
 {
     httpd_resp_sendstr(r, "{\"ok\":true}");
@@ -378,6 +429,8 @@ void web_start(void)
         { .uri = "/api/poll", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_poll },
         { .uri = "/api/ota", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota },
         { .uri = "/api/ota/confirm", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_ota_confirm },
+        { .uri = "/api/gps", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_gps },
+        { .uri = "/api/gps/quiet", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_gps_quiet },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
         { .uri = "/api/e52/apply", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_apply },
         { .uri = "/api/e52/at", .method = HTTP_POST, .handler = h_async, .user_ctx = h_e52_at },

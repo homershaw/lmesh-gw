@@ -18,4 +18,5 @@ typedef struct {
 } gps_fix_t;
 
 esp_err_t gps_start(void);
+size_t gps_raw(char *out, size_t max);   /* latest raw NMEA sentences, text */
 bool gps_get(gps_fix_t *out);   /* false = receiver silent */
