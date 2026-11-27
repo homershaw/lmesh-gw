@@ -3,8 +3,17 @@
 #include <stddef.h>
 #include <stdbool.h>
 #include "esp_err.h"
+#include "sdkconfig.h"
 
 #define E52_MAX_PAYLOAD 200
+
+/* Highest value of the e52_rate setting. E52: 0..2 = 62.5k / 21.9k / 7k.
+ * Wio-E5 (shared/wio.c): 0..5 = SF5 / SF7 / SF9 / SF10 / SF11 / SF12 at 500 kHz. */
+#if CONFIG_LMESH_RADIO_WIO
+#define E52_RATE_MAX 5
+#else
+#define E52_RATE_MAX 2
+#endif
 
 typedef struct {
     uint8_t  type;      /* 0xC1 unicast, 0xC2 multicast, 0xC3 broadcast, 0xC4 anycast */

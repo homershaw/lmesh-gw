@@ -1,4 +1,12 @@
 menu "LMESH node"
+    config LMESH_RADIO_WIO
+        bool "Radio: Seeed Wio-E5 (LoRa star network) instead of Ebyte E52 (mesh)"
+        default n
+        help
+            Build the radio driver shared/wio.c instead of shared/e52.c. The
+            Wio-E5 runs its factory AT firmware in test mode as a plain LoRa
+            radio; addressing, acknowledgements and retries are done by wio.c.
+            Build a separate configuration for it, see sdkconfig.wio.defaults.
     config LMGW_E52_UART_NUM
         int "UART port for E52"
         default 1

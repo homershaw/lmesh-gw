@@ -13,3 +13,6 @@ dependencies:
   ## E52 dev board on the S31 USB-HS (OTG) port: CH340 USB-serial
   espressif/usb_host_ch34x_vcp:
     version: "^2.2.1"
+  ## Wio-E5 mini on the same port: CP2102N USB-serial
+  espressif/usb_host_cp210x_vcp:
+    version: "^2.2.0"

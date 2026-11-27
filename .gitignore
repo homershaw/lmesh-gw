@@ -9,3 +9,5 @@ dependencies.lock
 .~lock.*#
 ~$*
 __pycache__/
+build-wio/
+sdkconfig.wio

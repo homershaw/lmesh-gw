@@ -1,6 +1,14 @@
 menu "LoRa Mesh Gateway"
+    config LMESH_RADIO_WIO
+        bool "Radio: Seeed Wio-E5 (LoRa star network) instead of Ebyte E52 (mesh)"
+        default n
+        help
+            Build the radio driver shared/wio.c instead of shared/e52.c. The
+            Wio-E5 runs its factory AT firmware in test mode as a plain LoRa
+            radio; addressing, acknowledgements and retries are done by wio.c.
+            Build a separate configuration for it, see sdkconfig.wio.defaults.
     config LMGW_E52_USB
-        bool "E52 board on USB-HS (OTG) port via CH340 (else UART pins)"
+        bool "Radio board on USB-HS (OTG) port: E52 via CH340, Wio-E5 via CP2102N or CH340 (else UART pins)"
         default y
     config LMGW_E52_UART_NUM
         int "UART port for E52"

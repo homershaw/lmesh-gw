@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "config.h"
+#include "e52.h"
 #include "nvs_flash.h"
 #include "nvs.h"
 #include "esp_log.h"
@@ -114,7 +115,7 @@ bool cfg_from_json(const char *json)
 
     JN("pos_s", pos_s, 2, 3600);
     JN("e52_channel", e52_channel, 52, 77);
-    JN("e52_rate", e52_rate, 0, 2);
+    JN("e52_rate", e52_rate, 0, E52_RATE_MAX);
     JN("e52_power", e52_power, -9, 22);
     JN("e52_panid", e52_panid, 0, 0xFFFE);
     JN("e52_addr", e52_addr, 2, 0x7FFF);
