@@ -117,6 +117,7 @@ def modbus(unit, pdu):
 
 
 reasm = {}
+dn_last = {}        # src -> seq of the last MQTT downlink (gateway resends keep the seq)
 
 
 def on_frame(src, data):
@@ -145,6 +146,11 @@ def on_frame(src, data):
         log(f'Modbus from 0x{src:04X} seq {seq} unit {unit} pdu {pdu.hex()} -> {rsp.hex()}')
         lsend(src, T_UDP, seq, 502, 502, bytes([unit]) + rsp)
     elif typ == T_UDP and dport == 1884:
+        lsend(src, T_UDP, seq, 1884, sport)     # ack: empty datagram, same seq (as node.c)
+        if dn_last.get(src) == seq:
+            log(f'MQTT down seq {seq} again (gateway resend) - acked, ignored')
+            return
+        dn_last[src] = seq
         log(f'MQTT down: {pl!r}')
     elif typ == T_UDP:
         log(f'UDP 0x{src:04X} {sport}->{dport}: {pl!r}  (echoing)')
