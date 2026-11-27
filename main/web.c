@@ -506,15 +506,6 @@ static esp_err_t on_open(httpd_handle_t hd, int fd)
 
 void web_start(void)
 {
-    httpd_config_t c = HTTPD_DEFAULT_CONFIG();
-    c.stack_size = 10240;
-    c.max_uri_handlers = 20;
-    c.lru_purge_enable = true;
-    c.open_fn = on_open;
-    s_async_q = xQueueCreate(4, sizeof(httpd_req_t *));
-    for (int i = 0; i < WEB_WORKERS; i++) xTaskCreate(async_worker, "web_async", 8192, NULL, 5, NULL);
-    httpd_handle_t s;
-    if (httpd_start(&s, &c) != ESP_OK) { ESP_LOGE(TAG, "httpd start failed"); return; }
     const httpd_uri_t u[] = {
         { .uri = "/", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_index },
         { .uri = "/api/status", .method = HTTP_GET, .handler = h_sync, .user_ctx = h_status },
@@ -539,6 +530,17 @@ void web_start(void)
         { .uri = "/api/survey", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_survey },
         { .uri = "/api/reboot", .method = HTTP_POST, .handler = h_sync, .user_ctx = h_reboot },
     };
-    for (size_t i = 0; i < sizeof u / sizeof u[0]; i++) httpd_register_uri_handler(s, &u[i]);
+    const size_t n = sizeof u / sizeof u[0];
+    httpd_config_t c = HTTPD_DEFAULT_CONFIG();
+    c.stack_size = 10240;
+    c.max_uri_handlers = n;     /* sized from the table: a fixed 20 silently dropped the last two */
+    c.lru_purge_enable = true;
+    c.open_fn = on_open;
+    s_async_q = xQueueCreate(4, sizeof(httpd_req_t *));
+    for (int i = 0; i < WEB_WORKERS; i++) xTaskCreate(async_worker, "web_async", 8192, NULL, 5, NULL);
+    httpd_handle_t s;
+    if (httpd_start(&s, &c) != ESP_OK) { ESP_LOGE(TAG, "httpd start failed"); return; }
+    for (size_t i = 0; i < n; i++)
+        if (httpd_register_uri_handler(s, &u[i]) != ESP_OK) ESP_LOGE(TAG, "handler %s not registered", u[i].uri);
     ESP_LOGI(TAG, "web UI on port 80");
 }
