@@ -38,6 +38,7 @@ INK, MUTED, ACCENT = RGBColor(0x1D, 0x2B, 0x36), RGBColor(0x5B, 0x67, 0x70), RGB
 DOCS = [
     ('docs/DESIGN.md', 'docs/LMESH-Design-Notes.docx', 'LMESH design notes'),
     ('docs/WORKLOG-2026-11-21.md', 'docs/LMESH-Work-Log-2026-11-21.docx', 'LMESH work log, 21 November 2026'),
+    ('docs/WORKLOG-2026-11-26.md', 'docs/LMESH-Work-Log-2026-11-26.docx', 'LMESH work log, 26 November 2026'),
     ('node/README.md', 'docs/LMESH-Field-Node-Guide.docx', 'LMESH field node guide'),
     ('README.md', 'docs/LMESH-Gateway-Guide.docx', 'LMESH gateway guide'),
 ]

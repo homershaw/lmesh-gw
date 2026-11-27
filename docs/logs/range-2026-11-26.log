@@ -1,0 +1,1296 @@
+2026-11-26T17:27:06.033 AT+MODE=TEST -> +MODE: TEST
+2026-11-26T17:27:06.093 AT+TEST=RFCFG,923.125,SF7,500,12,15,22,ON,OFF,OFF -> +TEST: RFCFG F:923125000, SF7, BW500K, TXPR:12, RXPR:15, POW:22dBm, CRC:ON, IQ:OFF, NET:OFF
+2026-11-26T17:27:06.187 node 0x0002 on COM6: 923.125 MHz SF7 500 kHz, network 0x2001, gateway 0x0001; ack wait 370 ms
+2026-11-26T17:27:06.187 -> ANNOUNCE to gateway
+2026-11-26T17:27:06.439   ack from 0x0001 seq 54: try 1, 252 ms after first send  (RSSI -38 SNR 12)
+2026-11-26T17:27:06.687   ack from 0x0001 seq 55: try 1, 248 ms after first send  (RSSI -35 SNR 12)
+2026-11-26T17:27:10.672 not a star frame (29 B), ignored
+2026-11-26T17:27:10.731 not a star frame (33 B), ignored
+2026-11-26T17:27:11.133 not a star frame (29 B), ignored
+2026-11-26T17:27:11.188 -> PING gateway seq 3
+2026-11-26T17:27:11.427   ack from 0x0001 seq 56: try 1, 239 ms after first send  (RSSI -39 SNR 12)
+2026-11-26T17:27:11.629 <- 0x0001 data seq 10, 7 B (RSSI -40 SNR 12)
+2026-11-26T17:27:11.629    PONG from 0x0001 seq 3: round trip 441 ms  [1/1 pings ok]
+2026-11-26T17:27:16.189 -> PING gateway seq 4
+2026-11-26T17:27:16.428   ack from 0x0001 seq 57: try 1, 240 ms after first send  (RSSI -32 SNR 13)
+2026-11-26T17:27:16.629 <- 0x0001 data seq 11, 7 B (RSSI -31 SNR 12)
+2026-11-26T17:27:16.629    PONG from 0x0001 seq 4: round trip 440 ms  [2/2 pings ok]
+2026-11-26T17:27:21.021 not a star frame (33 B), ignored
+2026-11-26T17:27:21.049 not a star frame (29 B), ignored
+2026-11-26T17:27:21.198 -> PING gateway seq 5
+2026-11-26T17:27:21.437   ack from 0x0001 seq 58: try 1, 239 ms after first send  (RSSI -30 SNR 12)
+2026-11-26T17:27:21.639 <- 0x0001 data seq 12, 7 B (RSSI -29 SNR 12)
+2026-11-26T17:27:21.639    PONG from 0x0001 seq 5: round trip 441 ms  [3/3 pings ok]
+2026-11-26T17:27:26.199 -> PING gateway seq 6
+2026-11-26T17:27:26.784   repeat 1 of seq 59
+2026-11-26T17:27:27.389   repeat 2 of seq 59
+2026-11-26T17:27:27.989   repeat 3 of seq 59
+2026-11-26T17:27:28.428 not a star frame (29 B), ignored
+2026-11-26T17:27:28.564   no ack from 0x0001 seq 59 after 4 tries
+2026-11-26T17:27:31.206 -> PING gateway seq 7
+2026-11-26T17:27:31.790   repeat 1 of seq 60
+2026-11-26T17:27:32.479   repeat 2 of seq 60
+2026-11-26T17:27:33.055   repeat 3 of seq 60
+2026-11-26T17:27:33.629   no ack from 0x0001 seq 60 after 4 tries
+2026-11-26T17:27:34.200    PING seq 6: no PONG  [3/5 pings ok]
+2026-11-26T17:27:36.207 -> PING gateway seq 8
+2026-11-26T17:27:36.671 <- 0x0001 bcast seq 1, 30 B (RSSI -15 SNR 12)
+2026-11-26T17:27:36.671    ANNOUNCE from 0x0001: ['lmesh-gw', 'gateway', '1.0.0', '']
+2026-11-26T17:27:36.859   repeat 1 of seq 61
+2026-11-26T17:27:37.099   ack from 0x0001 seq 61: try 2, 891 ms after first send  (RSSI -15 SNR 12)
+2026-11-26T17:27:37.693   repeat 1 of seq 62
+2026-11-26T17:27:37.944   ack from 0x0001 seq 62: try 2, 845 ms after first send  (RSSI -28 SNR 12)
+2026-11-26T17:27:38.145 <- 0x0001 data seq 2, 7 B (RSSI -25 SNR 13)
+2026-11-26T17:27:38.145    PONG from 0x0001 seq 8: round trip 1938 ms  [4/6 pings ok]
+2026-11-26T17:27:39.215    PING seq 7: no PONG  [4/6 pings ok]
+2026-11-26T17:27:41.210 -> PING gateway seq 10
+2026-11-26T17:27:41.448   ack from 0x0001 seq 63: try 1, 238 ms after first send  (RSSI -14 SNR 13)
+2026-11-26T17:27:41.615 not a star frame (29 B), ignored
+2026-11-26T17:27:41.650 <- 0x0001 data seq 3, 7 B (RSSI -14 SNR 12)
+2026-11-26T17:27:41.650    PONG from 0x0001 seq 10: round trip 440 ms  [5/7 pings ok]
+2026-11-26T17:27:46.217 -> PING gateway seq 11
+2026-11-26T17:27:46.455   ack from 0x0001 seq 64: try 1, 239 ms after first send  (RSSI -23 SNR 13)
+2026-11-26T17:27:46.657 <- 0x0001 data seq 4, 7 B (RSSI -20 SNR 12)
+2026-11-26T17:27:46.657    PONG from 0x0001 seq 11: round trip 441 ms  [6/8 pings ok]
+2026-11-26T17:27:51.305 -> PING gateway seq 12
+2026-11-26T17:27:51.616   ack from 0x0001 seq 65: try 1, 244 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:27:51.760 <- 0x0001 data seq 5, 7 B (RSSI -41 SNR 12)
+2026-11-26T17:27:51.779    PONG from 0x0001 seq 12: round trip 506 ms  [7/9 pings ok]
+2026-11-26T17:27:56.264 -> PING gateway seq 13
+2026-11-26T17:27:56.504   ack from 0x0001 seq 66: try 1, 239 ms after first send  (RSSI -32 SNR 13)
+2026-11-26T17:27:56.704 <- 0x0001 data seq 6, 7 B (RSSI -32 SNR 12)
+2026-11-26T17:27:56.704    PONG from 0x0001 seq 13: round trip 441 ms  [8/10 pings ok]
+2026-11-26T17:28:01.265 -> PING gateway seq 14
+2026-11-26T17:28:01.506   ack from 0x0001 seq 67: try 1, 240 ms after first send  (RSSI -38 SNR 12)
+2026-11-26T17:28:01.706 <- 0x0001 data seq 7, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:28:01.706    PONG from 0x0001 seq 14: round trip 442 ms  [9/11 pings ok]
+2026-11-26T17:28:06.275 -> PING gateway seq 15
+2026-11-26T17:28:06.514   ack from 0x0001 seq 68: try 1, 239 ms after first send  (RSSI -43 SNR 12)
+2026-11-26T17:28:06.717 <- 0x0001 data seq 8, 7 B (RSSI -37 SNR 12)
+2026-11-26T17:28:06.717    PONG from 0x0001 seq 15: round trip 442 ms  [10/12 pings ok]
+2026-11-26T17:28:11.276 -> PING gateway seq 16
+2026-11-26T17:28:11.516   ack from 0x0001 seq 69: try 1, 239 ms after first send  (RSSI -37 SNR 12)
+2026-11-26T17:28:11.717 <- 0x0001 data seq 9, 7 B (RSSI -42 SNR 11)
+2026-11-26T17:28:11.717    PONG from 0x0001 seq 16: round trip 442 ms  [11/13 pings ok]
+2026-11-26T17:28:16.285 -> PING gateway seq 17
+2026-11-26T17:28:16.526   ack from 0x0001 seq 70: try 1, 240 ms after first send  (RSSI -45 SNR 12)
+2026-11-26T17:28:16.726 <- 0x0001 data seq 10, 7 B (RSSI -44 SNR 13)
+2026-11-26T17:28:16.726    PONG from 0x0001 seq 17: round trip 441 ms  [12/14 pings ok]
+2026-11-26T17:28:21.294 -> PING gateway seq 18
+2026-11-26T17:28:21.533   ack from 0x0001 seq 71: try 1, 238 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:28:21.735 <- 0x0001 data seq 11, 7 B (RSSI -52 SNR 12)
+2026-11-26T17:28:21.735    PONG from 0x0001 seq 18: round trip 442 ms  [13/15 pings ok]
+2026-11-26T17:28:26.305 -> PING gateway seq 19
+2026-11-26T17:28:26.545   ack from 0x0001 seq 72: try 1, 240 ms after first send  (RSSI -58 SNR 12)
+2026-11-26T17:28:26.747 <- 0x0001 data seq 12, 7 B (RSSI -72 SNR 12)
+2026-11-26T17:28:26.748    PONG from 0x0001 seq 19: round trip 443 ms  [14/16 pings ok]
+2026-11-26T17:28:31.307 -> PING gateway seq 20
+2026-11-26T17:28:31.547   ack from 0x0001 seq 73: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:28:31.748 <- 0x0001 data seq 13, 7 B (RSSI -66 SNR 12)
+2026-11-26T17:28:31.748    PONG from 0x0001 seq 20: round trip 441 ms  [15/17 pings ok]
+2026-11-26T17:28:36.314 -> PING gateway seq 21
+2026-11-26T17:28:36.554   ack from 0x0001 seq 74: try 1, 239 ms after first send  (RSSI -60 SNR 13)
+2026-11-26T17:28:36.756 <- 0x0001 data seq 14, 7 B (RSSI -54 SNR 10)
+2026-11-26T17:28:36.756    PONG from 0x0001 seq 21: round trip 442 ms  [16/18 pings ok]
+2026-11-26T17:28:41.323 -> PING gateway seq 22
+2026-11-26T17:28:41.563   ack from 0x0001 seq 75: try 1, 240 ms after first send  (RSSI -66 SNR 11)
+2026-11-26T17:28:41.763 <- 0x0001 data seq 15, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:28:41.763    PONG from 0x0001 seq 22: round trip 441 ms  [17/19 pings ok]
+2026-11-26T17:28:46.331 -> PING gateway seq 23
+2026-11-26T17:28:46.570   ack from 0x0001 seq 76: try 1, 238 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:28:46.772 <- 0x0001 data seq 16, 7 B (RSSI -67 SNR 11)
+2026-11-26T17:28:46.772    PONG from 0x0001 seq 23: round trip 442 ms  [18/20 pings ok]
+2026-11-26T17:28:51.332 -> PING gateway seq 24
+2026-11-26T17:28:51.572   ack from 0x0001 seq 77: try 1, 239 ms after first send  (RSSI -85 SNR 9)
+2026-11-26T17:28:51.773 <- 0x0001 data seq 17, 7 B (RSSI -68 SNR 12)
+2026-11-26T17:28:51.774    PONG from 0x0001 seq 24: round trip 442 ms  [19/21 pings ok]
+2026-11-26T17:28:56.342 -> PING gateway seq 25
+2026-11-26T17:28:56.581   ack from 0x0001 seq 78: try 1, 239 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:28:56.782 <- 0x0001 data seq 18, 7 B (RSSI -66 SNR 12)
+2026-11-26T17:28:56.782    PONG from 0x0001 seq 25: round trip 441 ms  [20/22 pings ok]
+2026-11-26T17:29:01.349 -> PING gateway seq 26
+2026-11-26T17:29:01.589   ack from 0x0001 seq 79: try 1, 240 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:29:01.790 <- 0x0001 data seq 19, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:29:01.791    PONG from 0x0001 seq 26: round trip 442 ms  [21/23 pings ok]
+2026-11-26T17:29:06.350 -> PING gateway seq 27
+2026-11-26T17:29:06.589   ack from 0x0001 seq 80: try 1, 238 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:29:06.792 <- 0x0001 data seq 20, 7 B (RSSI -62 SNR 11)
+2026-11-26T17:29:06.792    PONG from 0x0001 seq 27: round trip 442 ms  [22/24 pings ok]
+2026-11-26T17:29:11.352 -> PING gateway seq 28
+2026-11-26T17:29:11.591   ack from 0x0001 seq 81: try 1, 239 ms after first send  (RSSI -67 SNR 11)
+2026-11-26T17:29:11.792 <- 0x0001 data seq 21, 7 B (RSSI -62 SNR 12)
+2026-11-26T17:29:11.792    PONG from 0x0001 seq 28: round trip 440 ms  [23/25 pings ok]
+2026-11-26T17:29:16.355 -> PING gateway seq 29
+2026-11-26T17:29:16.594   ack from 0x0001 seq 82: try 1, 239 ms after first send  (RSSI -60 SNR 11)
+2026-11-26T17:29:16.855 <- 0x0001 data seq 22, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:29:16.893    PONG from 0x0001 seq 29: round trip 501 ms  [24/26 pings ok]
+2026-11-26T17:29:21.365 -> PING gateway seq 30
+2026-11-26T17:29:21.605   ack from 0x0001 seq 83: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:29:21.806 <- 0x0001 data seq 23, 7 B (RSSI -61 SNR 12)
+2026-11-26T17:29:21.806    PONG from 0x0001 seq 30: round trip 441 ms  [25/27 pings ok]
+2026-11-26T17:29:26.374 -> PING gateway seq 31
+2026-11-26T17:29:26.613   ack from 0x0001 seq 84: try 1, 239 ms after first send  (RSSI -54 SNR 12)
+2026-11-26T17:29:26.817 <- 0x0001 data seq 24, 7 B (RSSI -62 SNR 11)
+2026-11-26T17:29:26.817    PONG from 0x0001 seq 31: round trip 443 ms  [26/28 pings ok]
+2026-11-26T17:29:31.377 -> PING gateway seq 32
+2026-11-26T17:29:31.617   ack from 0x0001 seq 85: try 1, 239 ms after first send  (RSSI -59 SNR 12)
+2026-11-26T17:29:31.818 <- 0x0001 data seq 25, 7 B (RSSI -60 SNR 12)
+2026-11-26T17:29:31.818    PONG from 0x0001 seq 32: round trip 441 ms  [27/29 pings ok]
+2026-11-26T17:29:36.383 -> PING gateway seq 33
+2026-11-26T17:29:36.623   ack from 0x0001 seq 86: try 1, 240 ms after first send  (RSSI -54 SNR 11)
+2026-11-26T17:29:36.824 <- 0x0001 data seq 26, 7 B (RSSI -55 SNR 12)
+2026-11-26T17:29:36.825    PONG from 0x0001 seq 33: round trip 441 ms  [28/30 pings ok]
+2026-11-26T17:29:41.384 -> PING gateway seq 34
+2026-11-26T17:29:41.625   ack from 0x0001 seq 87: try 1, 240 ms after first send  (RSSI -80 SNR 11)
+2026-11-26T17:29:41.825 <- 0x0001 data seq 27, 7 B (RSSI -72 SNR 12)
+2026-11-26T17:29:41.825    PONG from 0x0001 seq 34: round trip 441 ms  [29/31 pings ok]
+2026-11-26T17:29:46.394 -> PING gateway seq 35
+2026-11-26T17:29:46.634   ack from 0x0001 seq 88: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:29:46.833 <- 0x0001 data seq 28, 7 B (RSSI -62 SNR 12)
+2026-11-26T17:29:46.834    PONG from 0x0001 seq 35: round trip 440 ms  [30/32 pings ok]
+2026-11-26T17:29:51.403 -> PING gateway seq 36
+2026-11-26T17:29:51.643   ack from 0x0001 seq 89: try 1, 240 ms after first send  (RSSI -66 SNR 13)
+2026-11-26T17:29:51.843 <- 0x0001 data seq 29, 7 B (RSSI -79 SNR 11)
+2026-11-26T17:29:51.844    PONG from 0x0001 seq 36: round trip 441 ms  [31/33 pings ok]
+2026-11-26T17:29:56.404 -> PING gateway seq 37
+2026-11-26T17:29:56.643   ack from 0x0001 seq 90: try 1, 238 ms after first send  (RSSI -56 SNR 12)
+2026-11-26T17:29:56.843 <- 0x0001 data seq 30, 7 B (RSSI -63 SNR 10)
+2026-11-26T17:29:56.844    PONG from 0x0001 seq 37: round trip 440 ms  [32/34 pings ok]
+2026-11-26T17:30:01.412 -> PING gateway seq 38
+2026-11-26T17:30:01.652   ack from 0x0001 seq 91: try 1, 240 ms after first send  (RSSI -61 SNR 12)
+2026-11-26T17:30:01.854 <- 0x0001 data seq 31, 7 B (RSSI -58 SNR 12)
+2026-11-26T17:30:01.855    PONG from 0x0001 seq 38: round trip 443 ms  [33/35 pings ok]
+2026-11-26T17:30:06.421 -> PING gateway seq 39
+2026-11-26T17:30:06.661   ack from 0x0001 seq 92: try 1, 239 ms after first send  (RSSI -51 SNR 13)
+2026-11-26T17:30:06.862 <- 0x0001 data seq 32, 7 B (RSSI -50 SNR 12)
+2026-11-26T17:30:06.863    PONG from 0x0001 seq 39: round trip 442 ms  [34/36 pings ok]
+2026-11-26T17:30:11.431 -> PING gateway seq 40
+2026-11-26T17:30:11.670   ack from 0x0001 seq 93: try 1, 239 ms after first send  (RSSI -50 SNR 12)
+2026-11-26T17:30:11.872 <- 0x0001 data seq 33, 7 B (RSSI -50 SNR 12)
+2026-11-26T17:30:11.873    PONG from 0x0001 seq 40: round trip 442 ms  [35/37 pings ok]
+2026-11-26T17:30:16.438 -> PING gateway seq 41
+2026-11-26T17:30:16.678   ack from 0x0001 seq 94: try 1, 240 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:30:16.879 <- 0x0001 data seq 34, 7 B (RSSI -49 SNR 12)
+2026-11-26T17:30:16.879    PONG from 0x0001 seq 41: round trip 442 ms  [36/38 pings ok]
+2026-11-26T17:30:21.442 -> PING gateway seq 42
+2026-11-26T17:30:21.682   ack from 0x0001 seq 95: try 1, 239 ms after first send  (RSSI -76 SNR 12)
+2026-11-26T17:30:21.883 <- 0x0001 data seq 35, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:30:21.884    PONG from 0x0001 seq 42: round trip 441 ms  [37/39 pings ok]
+2026-11-26T17:30:26.447 -> PING gateway seq 43
+2026-11-26T17:30:26.686   ack from 0x0001 seq 96: try 1, 239 ms after first send  (RSSI -56 SNR 11)
+2026-11-26T17:30:26.888 <- 0x0001 data seq 36, 7 B (RSSI -55 SNR 11)
+2026-11-26T17:30:26.888    PONG from 0x0001 seq 43: round trip 441 ms  [38/40 pings ok]
+2026-11-26T17:30:31.455 -> PING gateway seq 44
+2026-11-26T17:30:31.695   ack from 0x0001 seq 97: try 1, 240 ms after first send  (RSSI -73 SNR 13)
+2026-11-26T17:30:31.896 <- 0x0001 data seq 37, 7 B (RSSI -73 SNR 12)
+2026-11-26T17:30:31.896    PONG from 0x0001 seq 44: round trip 441 ms  [39/41 pings ok]
+2026-11-26T17:30:36.459 -> PING gateway seq 45
+2026-11-26T17:30:36.699   ack from 0x0001 seq 98: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:30:36.900 <- 0x0001 data seq 38, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:30:36.900    PONG from 0x0001 seq 45: round trip 441 ms  [40/42 pings ok]
+2026-11-26T17:30:41.463 -> PING gateway seq 46
+2026-11-26T17:30:41.703   ack from 0x0001 seq 99: try 1, 240 ms after first send  (RSSI -59 SNR 13)
+2026-11-26T17:30:41.903 <- 0x0001 data seq 39, 7 B (RSSI -60 SNR 12)
+2026-11-26T17:30:41.903    PONG from 0x0001 seq 46: round trip 442 ms  [41/43 pings ok]
+2026-11-26T17:30:46.473 -> PING gateway seq 47
+2026-11-26T17:30:46.713   ack from 0x0001 seq 100: try 1, 240 ms after first send  (RSSI -55 SNR 12)
+2026-11-26T17:30:46.913 <- 0x0001 data seq 40, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:30:46.913    PONG from 0x0001 seq 47: round trip 441 ms  [42/44 pings ok]
+2026-11-26T17:30:51.473 -> PING gateway seq 48
+2026-11-26T17:30:51.714   ack from 0x0001 seq 101: try 1, 240 ms after first send  (RSSI -57 SNR 12)
+2026-11-26T17:30:51.914 <- 0x0001 data seq 41, 7 B (RSSI -57 SNR 12)
+2026-11-26T17:30:51.914    PONG from 0x0001 seq 48: round trip 441 ms  [43/45 pings ok]
+2026-11-26T17:30:56.481 -> PING gateway seq 49
+2026-11-26T17:30:56.722   ack from 0x0001 seq 102: try 1, 239 ms after first send  (RSSI -59 SNR 12)
+2026-11-26T17:30:56.924 <- 0x0001 data seq 42, 7 B (RSSI -56 SNR 12)
+2026-11-26T17:30:56.924    PONG from 0x0001 seq 49: round trip 443 ms  [44/46 pings ok]
+2026-11-26T17:31:01.489 -> PING gateway seq 50
+2026-11-26T17:31:01.728   ack from 0x0001 seq 103: try 1, 239 ms after first send  (RSSI -60 SNR 11)
+2026-11-26T17:31:01.928 <- 0x0001 data seq 43, 7 B (RSSI -60 SNR 11)
+2026-11-26T17:31:01.929    PONG from 0x0001 seq 50: round trip 440 ms  [45/47 pings ok]
+2026-11-26T17:31:06.491 -> PING gateway seq 51
+2026-11-26T17:31:06.731   ack from 0x0001 seq 104: try 1, 240 ms after first send  (RSSI -61 SNR 12)
+2026-11-26T17:31:06.931 <- 0x0001 data seq 44, 7 B (RSSI -60 SNR 12)
+2026-11-26T17:31:06.931    PONG from 0x0001 seq 51: round trip 441 ms  [46/48 pings ok]
+2026-11-26T17:31:11.492 -> PING gateway seq 52
+2026-11-26T17:31:11.731   ack from 0x0001 seq 105: try 1, 239 ms after first send  (RSSI -55 SNR 12)
+2026-11-26T17:31:11.933 <- 0x0001 data seq 45, 7 B (RSSI -60 SNR 11)
+2026-11-26T17:31:11.934    PONG from 0x0001 seq 52: round trip 442 ms  [47/49 pings ok]
+2026-11-26T17:31:16.492 -> PING gateway seq 53
+2026-11-26T17:31:16.732   ack from 0x0001 seq 106: try 1, 240 ms after first send  (RSSI -56 SNR 12)
+2026-11-26T17:31:16.934 <- 0x0001 data seq 46, 7 B (RSSI -56 SNR 12)
+2026-11-26T17:31:16.934    PONG from 0x0001 seq 53: round trip 442 ms  [48/50 pings ok]
+2026-11-26T17:31:21.503 -> PING gateway seq 54
+2026-11-26T17:31:21.742   ack from 0x0001 seq 107: try 1, 239 ms after first send  (RSSI -61 SNR 7)
+2026-11-26T17:31:21.943 <- 0x0001 data seq 47, 7 B (RSSI -61 SNR 12)
+2026-11-26T17:31:21.944    PONG from 0x0001 seq 54: round trip 441 ms  [49/51 pings ok]
+2026-11-26T17:31:26.515 -> PING gateway seq 55
+2026-11-26T17:31:26.754   ack from 0x0001 seq 108: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:31:26.957 <- 0x0001 data seq 48, 7 B (RSSI -52 SNR 12)
+2026-11-26T17:31:26.957    PONG from 0x0001 seq 55: round trip 445 ms  [50/52 pings ok]
+2026-11-26T17:31:31.516 -> PING gateway seq 56
+2026-11-26T17:31:31.756   ack from 0x0001 seq 109: try 1, 239 ms after first send  (RSSI -39 SNR 12)
+2026-11-26T17:31:31.959 <- 0x0001 data seq 49, 7 B (RSSI -40 SNR 12)
+2026-11-26T17:31:31.959    PONG from 0x0001 seq 56: round trip 443 ms  [51/53 pings ok]
+2026-11-26T17:31:36.522 -> PING gateway seq 57
+2026-11-26T17:31:36.762   ack from 0x0001 seq 110: try 1, 239 ms after first send  (RSSI -33 SNR 12)
+2026-11-26T17:31:36.963 <- 0x0001 data seq 50, 7 B (RSSI -30 SNR 12)
+2026-11-26T17:31:36.963    PONG from 0x0001 seq 57: round trip 441 ms  [52/54 pings ok]
+2026-11-26T17:31:40.225 not a star frame (29 B), ignored
+2026-11-26T17:31:40.258 not a star frame (33 B), ignored
+2026-11-26T17:31:40.562 not a star frame (29 B), ignored
+2026-11-26T17:31:41.528 -> PING gateway seq 58
+2026-11-26T17:31:41.802   ack from 0x0001 seq 111: try 1, 239 ms after first send  (RSSI -31 SNR 13)
+2026-11-26T17:31:41.969 <- 0x0001 data seq 51, 7 B (RSSI -34 SNR 11)
+2026-11-26T17:31:41.970    PONG from 0x0001 seq 58: round trip 441 ms  [53/55 pings ok]
+2026-11-26T17:31:46.531 -> PING gateway seq 59
+2026-11-26T17:31:46.770   ack from 0x0001 seq 112: try 1, 239 ms after first send  (RSSI -33 SNR 12)
+2026-11-26T17:31:46.971 <- 0x0001 data seq 52, 7 B (RSSI -32 SNR 12)
+2026-11-26T17:31:46.971    PONG from 0x0001 seq 59: round trip 441 ms  [54/56 pings ok]
+2026-11-26T17:31:50.539 not a star frame (29 B), ignored
+2026-11-26T17:31:50.564 not a star frame (33 B), ignored
+2026-11-26T17:31:50.877 not a star frame (29 B), ignored
+2026-11-26T17:31:51.533 -> PING gateway seq 60
+2026-11-26T17:31:51.773   ack from 0x0001 seq 113: try 1, 239 ms after first send  (RSSI -26 SNR 13)
+2026-11-26T17:31:51.976 <- 0x0001 data seq 53, 7 B (RSSI -25 SNR 13)
+2026-11-26T17:31:51.976    PONG from 0x0001 seq 60: round trip 442 ms  [55/57 pings ok]
+2026-11-26T17:31:56.541 -> PING gateway seq 61
+2026-11-26T17:31:56.781   ack from 0x0001 seq 114: try 1, 239 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:31:56.982 <- 0x0001 data seq 54, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:31:56.983    PONG from 0x0001 seq 61: round trip 442 ms  [56/58 pings ok]
+2026-11-26T17:32:00.840 not a star frame (29 B), ignored
+2026-11-26T17:32:01.156 not a star frame (29 B), ignored
+2026-11-26T17:32:01.545 -> PING gateway seq 62
+2026-11-26T17:32:01.785   ack from 0x0001 seq 115: try 1, 240 ms after first send  (RSSI -28 SNR 13)
+2026-11-26T17:32:01.935 not a star frame (29 B), ignored
+2026-11-26T17:32:01.986 <- 0x0001 data seq 55, 7 B (RSSI -28 SNR 12)
+2026-11-26T17:32:01.986    PONG from 0x0001 seq 62: round trip 442 ms  [57/59 pings ok]
+2026-11-26T17:32:06.556 -> PING gateway seq 63
+2026-11-26T17:32:06.795   ack from 0x0001 seq 116: try 1, 239 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:32:06.996 <- 0x0001 data seq 56, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:32:06.997    PONG from 0x0001 seq 63: round trip 441 ms  [58/60 pings ok]
+2026-11-26T17:32:11.561 -> PING gateway seq 64
+2026-11-26T17:32:11.801   ack from 0x0001 seq 117: try 1, 239 ms after first send  (RSSI -29 SNR 13)
+2026-11-26T17:32:12.002 <- 0x0001 data seq 57, 7 B (RSSI -40 SNR 11)
+2026-11-26T17:32:12.002    PONG from 0x0001 seq 64: round trip 442 ms  [59/61 pings ok]
+2026-11-26T17:32:16.569 -> PING gateway seq 65
+2026-11-26T17:32:17.284 no TX DONE for a 15-byte frame
+2026-11-26T17:32:17.786 module did not go back to receive
+2026-11-26T17:32:18.261   repeat 1 of seq 118
+2026-11-26T17:32:18.977 no TX DONE for a 15-byte frame
+2026-11-26T17:32:19.478 module did not go back to receive
+2026-11-26T17:32:19.883   repeat 2 of seq 118
+2026-11-26T17:32:20.597 no TX DONE for a 15-byte frame
+2026-11-26T17:32:21.098 module did not go back to receive
+2026-11-26T17:32:21.534   repeat 3 of seq 118
+2026-11-26T17:32:22.248 no TX DONE for a 15-byte frame
+2026-11-26T17:32:22.751 module did not go back to receive
+2026-11-26T17:32:23.122   no ack from 0x0001 seq 118 after 4 tries
+2026-11-26T17:32:23.122 -> PING gateway seq 66
+2026-11-26T17:32:23.837 no TX DONE for a 15-byte frame
+2026-11-26T17:32:24.339 module did not go back to receive
+2026-11-26T17:32:24.572    PING seq 65: no PONG  [59/63 pings ok]
+2026-11-26T17:32:24.820   repeat 1 of seq 119
+2026-11-26T17:32:25.535 no TX DONE for a 15-byte frame
+2026-11-26T17:32:26.038 module did not go back to receive
+2026-11-26T17:32:26.467   repeat 2 of seq 119
+2026-11-26T17:32:27.182 no TX DONE for a 15-byte frame
+2026-11-26T17:32:27.684 module did not go back to receive
+2026-11-26T17:32:28.094   repeat 3 of seq 119
+2026-11-26T17:32:28.809 no TX DONE for a 15-byte frame
+2026-11-26T17:32:29.310 module did not go back to receive
+2026-11-26T17:32:29.682   no ack from 0x0001 seq 119 after 4 tries
+2026-11-26T17:32:29.939 -> PING gateway seq 67
+2026-11-26T17:32:30.653 no TX DONE for a 15-byte frame
+2026-11-26T17:32:31.155 module did not go back to receive
+2026-11-26T17:32:31.155    PING seq 66: no PONG  [59/64 pings ok]
+2026-11-26T17:32:31.551   repeat 1 of seq 120
+2026-11-26T17:32:32.266 no TX DONE for a 15-byte frame
+2026-11-26T17:32:32.767 module did not go back to receive
+2026-11-26T17:32:33.207   repeat 2 of seq 120
+2026-11-26T17:32:33.922 no TX DONE for a 15-byte frame
+2026-11-26T17:32:34.424 module did not go back to receive
+2026-11-26T17:32:34.805   repeat 3 of seq 120
+2026-11-26T17:32:35.519 no TX DONE for a 15-byte frame
+2026-11-26T17:32:36.020 module did not go back to receive
+2026-11-26T17:32:36.391   no ack from 0x0001 seq 120 after 4 tries
+2026-11-26T17:32:36.644 -> PING gateway seq 68
+2026-11-26T17:32:37.359 no TX DONE for a 15-byte frame
+2026-11-26T17:32:37.860 module did not go back to receive
+2026-11-26T17:32:37.860    PING seq 67: no PONG  [59/65 pings ok]
+2026-11-26T17:32:38.293   repeat 1 of seq 121
+2026-11-26T17:32:39.007 no TX DONE for a 15-byte frame
+2026-11-26T17:32:39.521 module did not go back to receive
+2026-11-26T17:32:39.958   repeat 2 of seq 121
+2026-11-26T17:32:40.673 no TX DONE for a 15-byte frame
+2026-11-26T17:32:41.175 module did not go back to receive
+2026-11-26T17:32:41.608   repeat 3 of seq 121
+2026-11-26T17:32:42.323 no TX DONE for a 15-byte frame
+2026-11-26T17:32:42.825 module did not go back to receive
+2026-11-26T17:32:43.195   no ack from 0x0001 seq 121 after 4 tries
+2026-11-26T17:32:43.454 -> PING gateway seq 69
+2026-11-26T17:32:44.168 no TX DONE for a 15-byte frame
+2026-11-26T17:32:44.670 module did not go back to receive
+2026-11-26T17:32:44.670    PING seq 68: no PONG  [59/66 pings ok]
+2026-11-26T17:32:45.108   repeat 1 of seq 122
+2026-11-26T17:32:45.822 no TX DONE for a 15-byte frame
+2026-11-26T17:32:46.324 module did not go back to receive
+2026-11-26T17:32:46.757   repeat 2 of seq 122
+2026-11-26T17:32:47.471 no TX DONE for a 15-byte frame
+2026-11-26T17:32:47.974 module did not go back to receive
+2026-11-26T17:32:48.367   repeat 3 of seq 122
+2026-11-26T17:32:49.082 no TX DONE for a 15-byte frame
+2026-11-26T17:32:49.585 module did not go back to receive
+2026-11-26T17:32:49.956   no ack from 0x0001 seq 122 after 4 tries
+2026-11-26T17:32:50.207 -> PING gateway seq 70
+2026-11-26T17:32:50.921 no TX DONE for a 15-byte frame
+2026-11-26T17:32:51.423 module did not go back to receive
+2026-11-26T17:32:51.423    PING seq 69: no PONG  [59/67 pings ok]
+2026-11-26T17:32:51.816   repeat 1 of seq 123
+2026-11-26T17:32:52.530 no TX DONE for a 15-byte frame
+2026-11-26T17:32:53.033 module did not go back to receive
+2026-11-26T17:32:53.494   repeat 2 of seq 123
+2026-11-26T17:32:54.210 no TX DONE for a 15-byte frame
+2026-11-26T17:32:54.712 module did not go back to receive
+2026-11-26T17:32:55.093   repeat 3 of seq 123
+2026-11-26T17:32:55.808 no TX DONE for a 15-byte frame
+2026-11-26T17:32:56.310 module did not go back to receive
+2026-11-26T17:32:56.683   no ack from 0x0001 seq 123 after 4 tries
+2026-11-26T17:32:56.940 -> PING gateway seq 71
+2026-11-26T17:32:57.654 no TX DONE for a 15-byte frame
+2026-11-26T17:32:58.156 module did not go back to receive
+2026-11-26T17:32:58.156    PING seq 70: no PONG  [59/68 pings ok]
+2026-11-26T17:32:58.611   repeat 1 of seq 124
+2026-11-26T17:32:59.326 no TX DONE for a 15-byte frame
+2026-11-26T17:32:59.828 module did not go back to receive
+2026-11-26T17:33:00.205   repeat 2 of seq 124
+2026-11-26T17:33:00.920 no TX DONE for a 15-byte frame
+2026-11-26T17:33:01.422 module did not go back to receive
+2026-11-26T17:33:01.830   repeat 3 of seq 124
+2026-11-26T17:33:02.543 no TX DONE for a 15-byte frame
+2026-11-26T17:33:03.046 module did not go back to receive
+2026-11-26T17:33:03.447   no ack from 0x0001 seq 124 after 4 tries
+2026-11-26T17:33:03.714 -> PING gateway seq 72
+2026-11-26T17:33:04.429 no TX DONE for a 15-byte frame
+2026-11-26T17:33:04.930 module did not go back to receive
+2026-11-26T17:33:04.931    PING seq 71: no PONG  [59/69 pings ok]
+2026-11-26T17:33:05.389   repeat 1 of seq 125
+2026-11-26T17:33:06.104 no TX DONE for a 15-byte frame
+2026-11-26T17:33:06.605 module did not go back to receive
+2026-11-26T17:33:07.005   repeat 2 of seq 125
+2026-11-26T17:33:07.719 no TX DONE for a 15-byte frame
+2026-11-26T17:33:08.220 module did not go back to receive
+2026-11-26T17:33:08.671   repeat 3 of seq 125
+2026-11-26T17:33:09.386 no TX DONE for a 15-byte frame
+2026-11-26T17:33:09.889 module did not go back to receive
+2026-11-26T17:33:10.261   no ack from 0x0001 seq 125 after 4 tries
+2026-11-26T17:33:10.514 -> PING gateway seq 73
+2026-11-26T17:33:11.228 no TX DONE for a 15-byte frame
+2026-11-26T17:33:11.741 module did not go back to receive
+2026-11-26T17:33:11.742    PING seq 72: no PONG  [59/70 pings ok]
+2026-11-26T17:33:12.129   repeat 1 of seq 126
+2026-11-26T17:33:12.843 no TX DONE for a 15-byte frame
+2026-11-26T17:33:13.344 module did not go back to receive
+2026-11-26T17:33:13.788   repeat 2 of seq 126
+2026-11-26T17:33:14.503 no TX DONE for a 15-byte frame
+2026-11-26T17:33:15.006 module did not go back to receive
+2026-11-26T17:33:15.385   repeat 3 of seq 126
+2026-11-26T17:33:16.099 no TX DONE for a 15-byte frame
+2026-11-26T17:33:16.602 module did not go back to receive
+2026-11-26T17:33:16.974   no ack from 0x0001 seq 126 after 4 tries
+2026-11-26T17:33:17.230 -> PING gateway seq 74
+2026-11-26T17:33:17.943 no TX DONE for a 15-byte frame
+2026-11-26T17:33:18.444 module did not go back to receive
+2026-11-26T17:33:18.444    PING seq 73: no PONG  [59/71 pings ok]
+2026-11-26T17:33:18.884   repeat 1 of seq 127
+2026-11-26T17:33:39.671 AT+MODE=TEST -> +MODE: TEST
+2026-11-26T17:33:39.739 AT+TEST=RFCFG,923.125,SF7,500,12,15,22,ON,OFF,OFF -> +TEST: RFCFG F:923125000, SF7, BW500K, TXPR:12, RXPR:15, POW:22dBm, CRC:ON, IQ:OFF, NET:OFF
+2026-11-26T17:33:39.832 node 0x0002 on COM6: 923.125 MHz SF7 500 kHz, network 0x2001, gateway 0x0001; ack wait 370 ms
+2026-11-26T17:33:39.832 -> ANNOUNCE to gateway
+2026-11-26T17:33:40.085   ack from 0x0001 seq 120: try 1, 252 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:33:40.334   ack from 0x0001 seq 121: try 1, 249 ms after first send  (RSSI -51 SNR 13)
+2026-11-26T17:33:44.843 -> PING gateway seq 3
+2026-11-26T17:33:45.083   ack from 0x0001 seq 122: try 1, 240 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:33:45.290 <- 0x0001 data seq 58, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:33:45.299    PONG from 0x0001 seq 3: round trip 449 ms  [1/1 pings ok]
+2026-11-26T17:33:49.844 -> PING gateway seq 4
+2026-11-26T17:33:50.083   ack from 0x0001 seq 123: try 1, 239 ms after first send  (RSSI -51 SNR 13)
+2026-11-26T17:33:50.284 <- 0x0001 data seq 59, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:33:50.285    PONG from 0x0001 seq 4: round trip 441 ms  [2/2 pings ok]
+2026-11-26T17:33:54.853 -> PING gateway seq 5
+2026-11-26T17:33:55.092   ack from 0x0001 seq 124: try 1, 239 ms after first send  (RSSI -52 SNR 8)
+2026-11-26T17:33:55.293 <- 0x0001 data seq 60, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:33:55.294    PONG from 0x0001 seq 5: round trip 441 ms  [3/3 pings ok]
+2026-11-26T17:33:59.863 -> PING gateway seq 6
+2026-11-26T17:34:00.104   ack from 0x0001 seq 125: try 1, 240 ms after first send  (RSSI -51 SNR 11)
+2026-11-26T17:34:00.305 <- 0x0001 data seq 61, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:34:00.305    PONG from 0x0001 seq 6: round trip 442 ms  [4/4 pings ok]
+2026-11-26T17:34:04.868 -> PING gateway seq 7
+2026-11-26T17:34:05.111   ack from 0x0001 seq 126: try 1, 239 ms after first send  (RSSI -51 SNR 13)
+2026-11-26T17:34:05.309 <- 0x0001 data seq 62, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:34:05.309    PONG from 0x0001 seq 7: round trip 441 ms  [5/5 pings ok]
+2026-11-26T17:34:09.875 -> PING gateway seq 8
+2026-11-26T17:34:10.115   ack from 0x0001 seq 127: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:34:10.316 <- 0x0001 data seq 63, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:34:10.317    PONG from 0x0001 seq 8: round trip 442 ms  [6/6 pings ok]
+2026-11-26T17:34:14.877 -> PING gateway seq 9
+2026-11-26T17:34:15.117   ack from 0x0001 seq 128: try 1, 239 ms after first send  (RSSI -50 SNR 11)
+2026-11-26T17:34:15.317 <- 0x0001 data seq 64, 7 B (RSSI -50 SNR 12)
+2026-11-26T17:34:15.318    PONG from 0x0001 seq 9: round trip 441 ms  [7/7 pings ok]
+2026-11-26T17:34:19.884 -> PING gateway seq 10
+2026-11-26T17:34:20.123   ack from 0x0001 seq 129: try 1, 239 ms after first send  (RSSI -49 SNR 12)
+2026-11-26T17:34:20.324 <- 0x0001 data seq 65, 7 B (RSSI -48 SNR 12)
+2026-11-26T17:34:20.325    PONG from 0x0001 seq 10: round trip 441 ms  [8/8 pings ok]
+2026-11-26T17:34:24.890 -> PING gateway seq 11
+2026-11-26T17:34:25.129   ack from 0x0001 seq 130: try 1, 239 ms after first send  (RSSI -48 SNR 13)
+2026-11-26T17:34:25.332 <- 0x0001 data seq 66, 7 B (RSSI -48 SNR 12)
+2026-11-26T17:34:25.333    PONG from 0x0001 seq 11: round trip 443 ms  [9/9 pings ok]
+2026-11-26T17:34:29.897 -> PING gateway seq 12
+2026-11-26T17:34:30.137   ack from 0x0001 seq 131: try 1, 238 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:34:30.339 <- 0x0001 data seq 67, 7 B (RSSI -59 SNR 12)
+2026-11-26T17:34:30.339    PONG from 0x0001 seq 12: round trip 442 ms  [10/10 pings ok]
+2026-11-26T17:34:34.904 -> PING gateway seq 13
+2026-11-26T17:34:35.144   ack from 0x0001 seq 132: try 1, 239 ms after first send  (RSSI -51 SNR 13)
+2026-11-26T17:34:35.345 <- 0x0001 data seq 68, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:34:35.346    PONG from 0x0001 seq 13: round trip 442 ms  [11/11 pings ok]
+2026-11-26T17:34:36.261 not a star frame (33 B), ignored
+2026-11-26T17:34:39.908 -> PING gateway seq 14
+2026-11-26T17:34:40.147   ack from 0x0001 seq 133: try 1, 239 ms after first send  (RSSI -48 SNR 13)
+2026-11-26T17:34:40.348 <- 0x0001 data seq 69, 7 B (RSSI -48 SNR 12)
+2026-11-26T17:34:40.348    PONG from 0x0001 seq 14: round trip 441 ms  [12/12 pings ok]
+2026-11-26T17:34:44.914 -> PING gateway seq 15
+2026-11-26T17:34:45.565   repeat 1 of seq 134
+2026-11-26T17:34:46.151   repeat 2 of seq 134
+2026-11-26T17:34:46.760   repeat 3 of seq 134
+2026-11-26T17:34:47.336   no ack from 0x0001 seq 134 after 4 tries
+2026-11-26T17:34:49.915 -> PING gateway seq 16
+2026-11-26T17:34:50.564   repeat 1 of seq 135
+2026-11-26T17:34:50.569   ack from 0x0001 seq 135: try 2, 653 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:34:51.454 <- 0x0001 data seq 70, 7 B (RSSI -70 SNR 12)
+2026-11-26T17:34:51.455    PONG from 0x0001 seq 16: round trip 1540 ms  [13/14 pings ok]
+2026-11-26T17:34:52.914    PING seq 15: no PONG  [13/14 pings ok]
+2026-11-26T17:34:54.921 -> PING gateway seq 17
+2026-11-26T17:34:55.175   ack from 0x0001 seq 136: try 1, 239 ms after first send  (RSSI -69 SNR 13)
+2026-11-26T17:34:55.361 <- 0x0001 data seq 71, 7 B (RSSI -69 SNR 12)
+2026-11-26T17:34:55.362    PONG from 0x0001 seq 17: round trip 441 ms  [14/15 pings ok]
+2026-11-26T17:34:59.929 -> PING gateway seq 18
+2026-11-26T17:35:00.168   ack from 0x0001 seq 137: try 1, 238 ms after first send  (RSSI -69 SNR 12)
+2026-11-26T17:35:00.370 <- 0x0001 data seq 72, 7 B (RSSI -69 SNR 12)
+2026-11-26T17:35:00.370    PONG from 0x0001 seq 18: round trip 441 ms  [15/16 pings ok]
+2026-11-26T17:35:03.338 AT+MODE=TEST -> +MODE: TEST
+2026-11-26T17:35:03.399 AT+TEST=RFCFG,923.125,SF7,500,12,15,-1,ON,OFF,OFF -> +TEST: RFCFG F:923125000, SF7, BW500K, TXPR:12, RXPR:15, POW:-1dBm, CRC:ON, IQ:OFF, NET:OFF
+2026-11-26T17:35:03.493 node 0x0002 on COM6: 923.125 MHz SF7 500 kHz, network 0x2001, gateway 0x0001; ack wait 370 ms
+2026-11-26T17:35:03.493 -> ANNOUNCE to gateway
+2026-11-26T17:35:03.745   ack from 0x0001 seq 213: try 1, 251 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:35:03.994   ack from 0x0001 seq 214: try 1, 249 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:35:08.498 -> PING gateway seq 3
+2026-11-26T17:35:08.738   ack from 0x0001 seq 215: try 1, 239 ms after first send  (RSSI -69 SNR 12)
+2026-11-26T17:35:08.940 <- 0x0001 data seq 73, 7 B (RSSI -81 SNR 12)
+2026-11-26T17:35:08.940    PONG from 0x0001 seq 3: round trip 442 ms  [1/1 pings ok]
+2026-11-26T17:35:13.500 -> PING gateway seq 4
+2026-11-26T17:35:13.740   ack from 0x0001 seq 216: try 1, 240 ms after first send  (RSSI -71 SNR 12)
+2026-11-26T17:35:13.941 <- 0x0001 data seq 74, 7 B (RSSI -71 SNR 12)
+2026-11-26T17:35:13.941    PONG from 0x0001 seq 4: round trip 442 ms  [2/2 pings ok]
+2026-11-26T17:35:18.504 -> PING gateway seq 5
+2026-11-26T17:35:18.743   ack from 0x0001 seq 217: try 1, 239 ms after first send  (RSSI -69 SNR 12)
+2026-11-26T17:35:18.945 <- 0x0001 data seq 75, 7 B (RSSI -69 SNR 12)
+2026-11-26T17:35:18.945    PONG from 0x0001 seq 5: round trip 441 ms  [3/3 pings ok]
+2026-11-26T17:35:23.511 -> PING gateway seq 6
+2026-11-26T17:35:23.750   ack from 0x0001 seq 218: try 1, 239 ms after first send  (RSSI -78 SNR 12)
+2026-11-26T17:35:23.953 <- 0x0001 data seq 76, 7 B (RSSI -73 SNR 12)
+2026-11-26T17:35:23.954    PONG from 0x0001 seq 6: round trip 443 ms  [4/4 pings ok]
+2026-11-26T17:35:28.521 -> PING gateway seq 7
+2026-11-26T17:35:28.760   ack from 0x0001 seq 219: try 1, 239 ms after first send  (RSSI -74 SNR 12)
+2026-11-26T17:35:28.961 <- 0x0001 data seq 77, 7 B (RSSI -74 SNR 12)
+2026-11-26T17:35:28.961    PONG from 0x0001 seq 7: round trip 441 ms  [5/5 pings ok]
+2026-11-26T17:35:33.521 -> PING gateway seq 8
+2026-11-26T17:35:33.760   ack from 0x0001 seq 220: try 1, 239 ms after first send  (RSSI -74 SNR 12)
+2026-11-26T17:35:33.962 <- 0x0001 data seq 78, 7 B (RSSI -74 SNR 12)
+2026-11-26T17:35:33.962    PONG from 0x0001 seq 8: round trip 441 ms  [6/6 pings ok]
+2026-11-26T17:35:38.522 -> PING gateway seq 9
+2026-11-26T17:35:38.761   ack from 0x0001 seq 221: try 1, 238 ms after first send  (RSSI -84 SNR 12)
+2026-11-26T17:35:38.964 <- 0x0001 data seq 79, 7 B (RSSI -85 SNR 12)
+2026-11-26T17:35:38.964    PONG from 0x0001 seq 9: round trip 442 ms  [7/7 pings ok]
+2026-11-26T17:35:43.529 -> PING gateway seq 10
+2026-11-26T17:35:43.769   ack from 0x0001 seq 222: try 1, 239 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:35:43.969 <- 0x0001 data seq 80, 7 B (RSSI -72 SNR 13)
+2026-11-26T17:35:43.970    PONG from 0x0001 seq 10: round trip 440 ms  [8/8 pings ok]
+2026-11-26T17:35:48.532 -> PING gateway seq 11
+2026-11-26T17:35:48.772   ack from 0x0001 seq 223: try 1, 239 ms after first send  (RSSI -95 SNR 9)
+2026-11-26T17:35:48.974 <- 0x0001 data seq 81, 7 B (RSSI -81 SNR 12)
+2026-11-26T17:35:48.974    PONG from 0x0001 seq 11: round trip 442 ms  [9/9 pings ok]
+2026-11-26T17:35:53.539 -> PING gateway seq 12
+2026-11-26T17:35:53.779   ack from 0x0001 seq 224: try 1, 239 ms after first send  (RSSI -76 SNR 12)
+2026-11-26T17:35:53.980 <- 0x0001 data seq 82, 7 B (RSSI -79 SNR 13)
+2026-11-26T17:35:53.982    PONG from 0x0001 seq 12: round trip 441 ms  [10/10 pings ok]
+2026-11-26T17:35:58.545 -> PING gateway seq 13
+2026-11-26T17:35:58.785   ack from 0x0001 seq 225: try 1, 239 ms after first send  (RSSI -84 SNR 12)
+2026-11-26T17:35:58.986 <- 0x0001 data seq 83, 7 B (RSSI -85 SNR 12)
+2026-11-26T17:35:58.987    PONG from 0x0001 seq 13: round trip 441 ms  [11/11 pings ok]
+2026-11-26T17:36:03.557 -> PING gateway seq 14
+2026-11-26T17:36:04.237   repeat 1 of seq 226
+2026-11-26T17:36:04.851   repeat 2 of seq 226
+2026-11-26T17:36:05.530   repeat 3 of seq 226
+2026-11-26T17:36:06.104   no ack from 0x0001 seq 226 after 4 tries
+2026-11-26T17:36:08.566 -> PING gateway seq 15
+2026-11-26T17:36:09.162   repeat 1 of seq 227
+2026-11-26T17:36:09.843   repeat 2 of seq 227
+2026-11-26T17:36:10.487   repeat 3 of seq 227
+2026-11-26T17:36:11.062   no ack from 0x0001 seq 227 after 4 tries
+2026-11-26T17:36:11.565    PING seq 14: no PONG  [11/13 pings ok]
+2026-11-26T17:36:13.568 -> PING gateway seq 16
+2026-11-26T17:36:14.177   repeat 1 of seq 228
+2026-11-26T17:36:14.809   repeat 2 of seq 228
+2026-11-26T17:36:15.433   repeat 3 of seq 228
+2026-11-26T17:36:16.008   no ack from 0x0001 seq 228 after 4 tries
+2026-11-26T17:36:16.566    PING seq 15: no PONG  [11/14 pings ok]
+2026-11-26T17:36:18.573 -> PING gateway seq 17
+2026-11-26T17:36:19.214   repeat 1 of seq 229
+2026-11-26T17:36:19.896   repeat 2 of seq 229
+2026-11-26T17:36:20.508   repeat 3 of seq 229
+2026-11-26T17:36:21.084   no ack from 0x0001 seq 229 after 4 tries
+2026-11-26T17:36:21.571    PING seq 16: no PONG  [11/15 pings ok]
+2026-11-26T17:36:23.580 -> PING gateway seq 18
+2026-11-26T17:36:24.195   repeat 1 of seq 230
+2026-11-26T17:36:24.780   repeat 2 of seq 230
+2026-11-26T17:36:25.378   repeat 3 of seq 230
+2026-11-26T17:36:25.955   no ack from 0x0001 seq 230 after 4 tries
+2026-11-26T17:36:26.582    PING seq 17: no PONG  [11/16 pings ok]
+2026-11-26T17:36:28.583 -> PING gateway seq 19
+2026-11-26T17:36:29.236   repeat 1 of seq 231
+2026-11-26T17:36:29.827   repeat 2 of seq 231
+2026-11-26T17:36:30.402   repeat 3 of seq 231
+2026-11-26T17:36:30.977   no ack from 0x0001 seq 231 after 4 tries
+2026-11-26T17:36:31.581    PING seq 18: no PONG  [11/17 pings ok]
+2026-11-26T17:36:33.586 -> PING gateway seq 20
+2026-11-26T17:36:34.217   repeat 1 of seq 232
+2026-11-26T17:36:34.841   repeat 2 of seq 232
+2026-11-26T17:36:35.464   repeat 3 of seq 232
+2026-11-26T17:36:36.039   no ack from 0x0001 seq 232 after 4 tries
+2026-11-26T17:36:36.591    PING seq 19: no PONG  [11/18 pings ok]
+2026-11-26T17:36:38.589 -> PING gateway seq 21
+2026-11-26T17:36:39.268   repeat 1 of seq 233
+2026-11-26T17:36:39.845   repeat 2 of seq 233
+2026-11-26T17:36:40.514   repeat 3 of seq 233
+2026-11-26T17:36:41.089   no ack from 0x0001 seq 233 after 4 tries
+2026-11-26T17:36:41.595    PING seq 20: no PONG  [11/19 pings ok]
+2026-11-26T17:36:43.596 -> PING gateway seq 22
+2026-11-26T17:36:43.836   ack from 0x0001 seq 234: try 1, 240 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:36:44.036 <- 0x0001 data seq 84, 7 B (RSSI -70 SNR 12)
+2026-11-26T17:36:44.036    PONG from 0x0001 seq 22: round trip 440 ms  [12/20 pings ok]
+2026-11-26T17:36:46.596    PING seq 21: no PONG  [12/20 pings ok]
+2026-11-26T17:36:48.603 -> PING gateway seq 23
+2026-11-26T17:36:48.842   ack from 0x0001 seq 235: try 1, 239 ms after first send  (RSSI -76 SNR 13)
+2026-11-26T17:36:49.043 <- 0x0001 data seq 85, 7 B (RSSI -74 SNR 12)
+2026-11-26T17:36:49.043    PONG from 0x0001 seq 23: round trip 440 ms  [13/21 pings ok]
+2026-11-26T17:36:53.608 -> PING gateway seq 24
+2026-11-26T17:36:53.847   ack from 0x0001 seq 236: try 1, 239 ms after first send  (RSSI -68 SNR 13)
+2026-11-26T17:36:54.048 <- 0x0001 data seq 86, 7 B (RSSI -67 SNR 12)
+2026-11-26T17:36:54.048    PONG from 0x0001 seq 24: round trip 441 ms  [14/22 pings ok]
+2026-11-26T17:36:58.610 -> PING gateway seq 25
+2026-11-26T17:36:58.849   ack from 0x0001 seq 237: try 1, 239 ms after first send  (RSSI -68 SNR 13)
+2026-11-26T17:36:59.049 <- 0x0001 data seq 87, 7 B (RSSI -67 SNR 12)
+2026-11-26T17:36:59.049    PONG from 0x0001 seq 25: round trip 440 ms  [15/23 pings ok]
+2026-11-26T17:37:03.619 -> PING gateway seq 26
+2026-11-26T17:37:03.859   ack from 0x0001 seq 238: try 1, 239 ms after first send  (RSSI -71 SNR 13)
+2026-11-26T17:37:04.060 <- 0x0001 data seq 88, 7 B (RSSI -96 SNR 8)
+2026-11-26T17:37:04.060    PONG from 0x0001 seq 26: round trip 441 ms  [16/24 pings ok]
+2026-11-26T17:37:08.628 -> PING gateway seq 27
+2026-11-26T17:37:08.868   ack from 0x0001 seq 239: try 1, 240 ms after first send  (RSSI -83 SNR 12)
+2026-11-26T17:37:09.067 <- 0x0001 data seq 89, 7 B (RSSI -87 SNR 11)
+2026-11-26T17:37:09.068    PONG from 0x0001 seq 27: round trip 440 ms  [17/25 pings ok]
+2026-11-26T17:37:13.629 -> PING gateway seq 28
+2026-11-26T17:37:14.280   repeat 1 of seq 240
+2026-11-26T17:37:14.919   repeat 2 of seq 240
+2026-11-26T17:37:15.548   repeat 3 of seq 240
+2026-11-26T17:37:16.123   no ack from 0x0001 seq 240 after 4 tries
+2026-11-26T17:37:18.640 -> PING gateway seq 29
+2026-11-26T17:37:19.231   repeat 1 of seq 241
+2026-11-26T17:37:19.888   repeat 2 of seq 241
+2026-11-26T17:37:20.127   ack from 0x0001 seq 241: try 3, 1486 ms after first send  (RSSI -84 SNR 12)
+2026-11-26T17:37:20.329 <- 0x0001 data seq 90, 7 B (RSSI -79 SNR 13)
+2026-11-26T17:37:20.329    PONG from 0x0001 seq 29: round trip 1689 ms  [18/27 pings ok]
+2026-11-26T17:37:21.631    PING seq 28: no PONG  [18/27 pings ok]
+2026-11-26T17:37:23.648 -> PING gateway seq 30
+2026-11-26T17:37:23.887   ack from 0x0001 seq 242: try 1, 238 ms after first send  (RSSI -67 SNR 12)
+2026-11-26T17:37:24.089 <- 0x0001 data seq 91, 7 B (RSSI -73 SNR 12)
+2026-11-26T17:37:24.089    PONG from 0x0001 seq 30: round trip 441 ms  [19/28 pings ok]
+2026-11-26T17:37:28.649 -> PING gateway seq 31
+2026-11-26T17:37:28.889   ack from 0x0001 seq 243: try 1, 239 ms after first send  (RSSI -61 SNR 12)
+2026-11-26T17:37:29.091 <- 0x0001 data seq 92, 7 B (RSSI -60 SNR 12)
+2026-11-26T17:37:29.091    PONG from 0x0001 seq 31: round trip 443 ms  [20/29 pings ok]
+2026-11-26T17:37:33.658 -> PING gateway seq 32
+2026-11-26T17:37:33.897   ack from 0x0001 seq 244: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:37:34.098 <- 0x0001 data seq 93, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:37:34.099    PONG from 0x0001 seq 32: round trip 441 ms  [21/30 pings ok]
+2026-11-26T17:37:38.667 -> PING gateway seq 33
+2026-11-26T17:37:38.906   ack from 0x0001 seq 245: try 1, 238 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:37:39.109 <- 0x0001 data seq 94, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:37:39.109    PONG from 0x0001 seq 33: round trip 442 ms  [22/31 pings ok]
+2026-11-26T17:37:43.668 -> PING gateway seq 34
+2026-11-26T17:37:43.908   ack from 0x0001 seq 246: try 1, 240 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:37:44.107 <- 0x0001 data seq 95, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:37:44.108    PONG from 0x0001 seq 34: round trip 440 ms  [23/32 pings ok]
+2026-11-26T17:37:48.676 -> PING gateway seq 35
+2026-11-26T17:37:48.916   ack from 0x0001 seq 247: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:37:49.118 <- 0x0001 data seq 96, 7 B (RSSI -62 SNR 12)
+2026-11-26T17:37:49.118    PONG from 0x0001 seq 35: round trip 442 ms  [24/33 pings ok]
+2026-11-26T17:37:53.680 -> PING gateway seq 36
+2026-11-26T17:37:53.919   ack from 0x0001 seq 248: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:37:54.134 <- 0x0001 data seq 97, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:37:54.134    PONG from 0x0001 seq 36: round trip 454 ms  [25/34 pings ok]
+2026-11-26T17:37:58.687 -> PING gateway seq 37
+2026-11-26T17:37:58.926   ack from 0x0001 seq 249: try 1, 239 ms after first send  (RSSI -63 SNR 13)
+2026-11-26T17:37:59.127 <- 0x0001 data seq 98, 7 B (RSSI -62 SNR 11)
+2026-11-26T17:37:59.128    PONG from 0x0001 seq 37: round trip 441 ms  [26/35 pings ok]
+2026-11-26T17:38:03.689 -> PING gateway seq 38
+2026-11-26T17:38:03.928   ack from 0x0001 seq 250: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:38:04.223 <- 0x0001 data seq 99, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:38:04.257    PONG from 0x0001 seq 38: round trip 535 ms  [27/36 pings ok]
+2026-11-26T17:38:08.691 -> PING gateway seq 39
+2026-11-26T17:38:08.932   ack from 0x0001 seq 251: try 1, 240 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:38:09.132 <- 0x0001 data seq 100, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:38:09.132    PONG from 0x0001 seq 39: round trip 441 ms  [28/37 pings ok]
+2026-11-26T17:38:13.691 -> PING gateway seq 40
+2026-11-26T17:38:13.932   ack from 0x0001 seq 252: try 1, 240 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:38:14.131 <- 0x0001 data seq 101, 7 B (RSSI -64 SNR 11)
+2026-11-26T17:38:14.131    PONG from 0x0001 seq 40: round trip 441 ms  [29/38 pings ok]
+2026-11-26T17:38:18.698 -> PING gateway seq 41
+2026-11-26T17:38:18.937   ack from 0x0001 seq 253: try 1, 238 ms after first send  (RSSI -65 SNR 11)
+2026-11-26T17:38:19.139 <- 0x0001 data seq 102, 7 B (RSSI -64 SNR 11)
+2026-11-26T17:38:19.139    PONG from 0x0001 seq 41: round trip 445 ms  [30/39 pings ok]
+2026-11-26T17:38:23.705 -> PING gateway seq 42
+2026-11-26T17:38:23.944   ack from 0x0001 seq 254: try 1, 238 ms after first send  (RSSI -65 SNR 13)
+2026-11-26T17:38:24.145 <- 0x0001 data seq 103, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:38:24.146    PONG from 0x0001 seq 42: round trip 441 ms  [31/40 pings ok]
+2026-11-26T17:38:28.713 -> PING gateway seq 43
+2026-11-26T17:38:28.953   ack from 0x0001 seq 255: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:38:29.154 <- 0x0001 data seq 104, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:38:29.154    PONG from 0x0001 seq 43: round trip 441 ms  [32/41 pings ok]
+2026-11-26T17:38:33.721 -> PING gateway seq 44
+2026-11-26T17:38:33.961   ack from 0x0001 seq 0: try 1, 240 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:38:34.161 <- 0x0001 data seq 105, 7 B (RSSI -63 SNR 11)
+2026-11-26T17:38:34.161    PONG from 0x0001 seq 44: round trip 440 ms  [33/42 pings ok]
+2026-11-26T17:38:38.730 -> PING gateway seq 45
+2026-11-26T17:38:38.970   ack from 0x0001 seq 1: try 1, 240 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:38:39.170 <- 0x0001 data seq 106, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:38:39.171    PONG from 0x0001 seq 45: round trip 441 ms  [34/43 pings ok]
+2026-11-26T17:38:43.737 -> PING gateway seq 46
+2026-11-26T17:38:43.976   ack from 0x0001 seq 2: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:38:44.176 <- 0x0001 data seq 107, 7 B (RSSI -63 SNR 13)
+2026-11-26T17:38:44.176    PONG from 0x0001 seq 46: round trip 439 ms  [35/44 pings ok]
+2026-11-26T17:38:48.739 -> PING gateway seq 47
+2026-11-26T17:38:48.979   ack from 0x0001 seq 3: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:38:49.180 <- 0x0001 data seq 108, 7 B (RSSI -63 SNR 11)
+2026-11-26T17:38:49.180    PONG from 0x0001 seq 47: round trip 442 ms  [36/45 pings ok]
+2026-11-26T17:38:53.745 -> PING gateway seq 48
+2026-11-26T17:38:53.984   ack from 0x0001 seq 4: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:38:54.185 <- 0x0001 data seq 109, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:38:54.185    PONG from 0x0001 seq 48: round trip 441 ms  [37/46 pings ok]
+2026-11-26T17:38:58.745 -> PING gateway seq 49
+2026-11-26T17:38:58.985   ack from 0x0001 seq 5: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:38:59.186 <- 0x0001 data seq 110, 7 B (RSSI -63 SNR 11)
+2026-11-26T17:38:59.186    PONG from 0x0001 seq 49: round trip 441 ms  [38/47 pings ok]
+2026-11-26T17:39:03.750 -> PING gateway seq 50
+2026-11-26T17:39:03.991   ack from 0x0001 seq 6: try 1, 240 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:39:04.191 <- 0x0001 data seq 111, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:04.192    PONG from 0x0001 seq 50: round trip 442 ms  [39/48 pings ok]
+2026-11-26T17:39:08.759 -> PING gateway seq 51
+2026-11-26T17:39:08.998   ack from 0x0001 seq 7: try 1, 239 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:39:09.199 <- 0x0001 data seq 112, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:09.200    PONG from 0x0001 seq 51: round trip 441 ms  [40/49 pings ok]
+2026-11-26T17:39:13.763 -> PING gateway seq 52
+2026-11-26T17:39:14.002   ack from 0x0001 seq 8: try 1, 239 ms after first send  (RSSI -63 SNR 13)
+2026-11-26T17:39:14.204 <- 0x0001 data seq 113, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:14.204    PONG from 0x0001 seq 52: round trip 442 ms  [41/50 pings ok]
+2026-11-26T17:39:18.791 -> PING gateway seq 53
+2026-11-26T17:39:19.030   ack from 0x0001 seq 9: try 1, 238 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:39:19.232 <- 0x0001 data seq 114, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:39:19.232    PONG from 0x0001 seq 53: round trip 454 ms  [42/51 pings ok]
+2026-11-26T17:39:23.783 -> PING gateway seq 54
+2026-11-26T17:39:24.023   ack from 0x0001 seq 10: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:39:24.225 <- 0x0001 data seq 115, 7 B (RSSI -62 SNR 12)
+2026-11-26T17:39:24.225    PONG from 0x0001 seq 54: round trip 443 ms  [43/52 pings ok]
+2026-11-26T17:39:28.824 -> PING gateway seq 55
+2026-11-26T17:39:29.069   ack from 0x0001 seq 11: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:39:29.265 <- 0x0001 data seq 116, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:29.265    PONG from 0x0001 seq 55: round trip 469 ms  [44/53 pings ok]
+2026-11-26T17:39:33.798 -> PING gateway seq 56
+2026-11-26T17:39:34.036   ack from 0x0001 seq 12: try 1, 238 ms after first send  (RSSI -64 SNR 8)
+2026-11-26T17:39:34.239 <- 0x0001 data seq 117, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:34.239    PONG from 0x0001 seq 56: round trip 441 ms  [45/54 pings ok]
+2026-11-26T17:39:38.808 -> PING gateway seq 57
+2026-11-26T17:39:39.048   ack from 0x0001 seq 13: try 1, 239 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:39:39.248 <- 0x0001 data seq 118, 7 B (RSSI -62 SNR 10)
+2026-11-26T17:39:39.249    PONG from 0x0001 seq 57: round trip 441 ms  [46/55 pings ok]
+2026-11-26T17:39:43.816 -> PING gateway seq 58
+2026-11-26T17:39:44.055   ack from 0x0001 seq 14: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:39:44.256 <- 0x0001 data seq 119, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:39:44.257    PONG from 0x0001 seq 58: round trip 441 ms  [47/56 pings ok]
+2026-11-26T17:39:48.819 -> PING gateway seq 59
+2026-11-26T17:39:49.059   ack from 0x0001 seq 15: try 1, 240 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:39:49.259 <- 0x0001 data seq 120, 7 B (RSSI -66 SNR 12)
+2026-11-26T17:39:49.260    PONG from 0x0001 seq 59: round trip 441 ms  [48/57 pings ok]
+2026-11-26T17:39:53.829 -> PING gateway seq 60
+2026-11-26T17:39:54.068   ack from 0x0001 seq 16: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:39:54.271 <- 0x0001 data seq 121, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:39:54.271    PONG from 0x0001 seq 60: round trip 443 ms  [49/58 pings ok]
+2026-11-26T17:39:58.838 -> PING gateway seq 61
+2026-11-26T17:39:59.077   ack from 0x0001 seq 17: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:39:59.278 <- 0x0001 data seq 122, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:39:59.278    PONG from 0x0001 seq 61: round trip 440 ms  [50/59 pings ok]
+2026-11-26T17:40:03.842 -> PING gateway seq 62
+2026-11-26T17:40:04.081   ack from 0x0001 seq 18: try 1, 238 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:40:04.284 <- 0x0001 data seq 123, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:40:04.284    PONG from 0x0001 seq 62: round trip 443 ms  [51/60 pings ok]
+2026-11-26T17:40:08.843 -> PING gateway seq 63
+2026-11-26T17:40:09.082   ack from 0x0001 seq 19: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:40:09.283 <- 0x0001 data seq 124, 7 B (RSSI -62 SNR 11)
+2026-11-26T17:40:09.284    PONG from 0x0001 seq 63: round trip 441 ms  [52/61 pings ok]
+2026-11-26T17:40:13.850 -> PING gateway seq 64
+2026-11-26T17:40:14.090   ack from 0x0001 seq 20: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:40:14.290 <- 0x0001 data seq 125, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:40:14.291    PONG from 0x0001 seq 64: round trip 441 ms  [53/62 pings ok]
+2026-11-26T17:40:18.853 -> PING gateway seq 65
+2026-11-26T17:40:19.093   ack from 0x0001 seq 21: try 1, 239 ms after first send  (RSSI -64 SNR 11)
+2026-11-26T17:40:19.294 <- 0x0001 data seq 126, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:40:19.294    PONG from 0x0001 seq 65: round trip 441 ms  [54/63 pings ok]
+2026-11-26T17:40:23.860 -> PING gateway seq 66
+2026-11-26T17:40:24.100   ack from 0x0001 seq 22: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:40:24.301 <- 0x0001 data seq 127, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:40:24.302    PONG from 0x0001 seq 66: round trip 441 ms  [55/64 pings ok]
+2026-11-26T17:40:28.868 -> PING gateway seq 67
+2026-11-26T17:40:29.107   ack from 0x0001 seq 23: try 1, 238 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:40:29.308 <- 0x0001 data seq 128, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:40:29.309    PONG from 0x0001 seq 67: round trip 441 ms  [56/65 pings ok]
+2026-11-26T17:40:33.874 -> PING gateway seq 68
+2026-11-26T17:40:34.115   ack from 0x0001 seq 24: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:40:34.314 <- 0x0001 data seq 129, 7 B (RSSI -64 SNR 11)
+2026-11-26T17:40:34.314    PONG from 0x0001 seq 68: round trip 440 ms  [57/66 pings ok]
+2026-11-26T17:40:38.881 -> PING gateway seq 69
+2026-11-26T17:40:39.120   ack from 0x0001 seq 25: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:40:39.330 <- 0x0001 data seq 130, 7 B (RSSI -63 SNR 11)
+2026-11-26T17:40:39.331    PONG from 0x0001 seq 69: round trip 449 ms  [58/67 pings ok]
+2026-11-26T17:40:43.881 -> PING gateway seq 70
+2026-11-26T17:40:44.121   ack from 0x0001 seq 26: try 1, 240 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:40:44.321 <- 0x0001 data seq 131, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:40:44.321    PONG from 0x0001 seq 70: round trip 441 ms  [59/68 pings ok]
+2026-11-26T17:40:48.882 -> PING gateway seq 71
+2026-11-26T17:40:49.122   ack from 0x0001 seq 27: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:40:49.322 <- 0x0001 data seq 132, 7 B (RSSI -62 SNR 12)
+2026-11-26T17:40:49.323    PONG from 0x0001 seq 71: round trip 440 ms  [60/69 pings ok]
+2026-11-26T17:40:53.888 -> PING gateway seq 72
+2026-11-26T17:40:54.128   ack from 0x0001 seq 28: try 1, 239 ms after first send  (RSSI -66 SNR 11)
+2026-11-26T17:40:54.329 <- 0x0001 data seq 133, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:40:54.329    PONG from 0x0001 seq 72: round trip 447 ms  [61/70 pings ok]
+2026-11-26T17:40:58.894 -> PING gateway seq 73
+2026-11-26T17:40:59.133   ack from 0x0001 seq 29: try 1, 239 ms after first send  (RSSI -66 SNR 11)
+2026-11-26T17:40:59.340 <- 0x0001 data seq 134, 7 B (RSSI -66 SNR 11)
+2026-11-26T17:40:59.341    PONG from 0x0001 seq 73: round trip 447 ms  [62/71 pings ok]
+2026-11-26T17:41:03.897 -> PING gateway seq 74
+2026-11-26T17:41:04.137   ack from 0x0001 seq 30: try 1, 239 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:41:04.337 <- 0x0001 data seq 135, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:41:04.337    PONG from 0x0001 seq 74: round trip 440 ms  [63/72 pings ok]
+2026-11-26T17:41:08.902 -> PING gateway seq 75
+2026-11-26T17:41:09.141   ack from 0x0001 seq 31: try 1, 239 ms after first send  (RSSI -67 SNR 11)
+2026-11-26T17:41:09.342 <- 0x0001 data seq 136, 7 B (RSSI -68 SNR 12)
+2026-11-26T17:41:09.342    PONG from 0x0001 seq 75: round trip 440 ms  [64/73 pings ok]
+2026-11-26T17:41:13.902 -> PING gateway seq 76
+2026-11-26T17:41:14.141   ack from 0x0001 seq 32: try 1, 238 ms after first send  (RSSI -63 SNR 13)
+2026-11-26T17:41:14.342 <- 0x0001 data seq 137, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:41:14.342    PONG from 0x0001 seq 76: round trip 440 ms  [65/74 pings ok]
+2026-11-26T17:41:18.904 -> PING gateway seq 77
+2026-11-26T17:41:19.143   ack from 0x0001 seq 33: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:41:19.344 <- 0x0001 data seq 138, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:41:19.344    PONG from 0x0001 seq 77: round trip 440 ms  [66/75 pings ok]
+2026-11-26T17:41:23.905 -> PING gateway seq 78
+2026-11-26T17:41:24.144   ack from 0x0001 seq 34: try 1, 238 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:41:24.348 <- 0x0001 data seq 139, 7 B (RSSI -63 SNR 11)
+2026-11-26T17:41:24.351    PONG from 0x0001 seq 78: round trip 444 ms  [67/76 pings ok]
+2026-11-26T17:41:28.906 -> PING gateway seq 79
+2026-11-26T17:41:29.146   ack from 0x0001 seq 35: try 1, 239 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:41:29.347 <- 0x0001 data seq 140, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:41:29.347    PONG from 0x0001 seq 79: round trip 442 ms  [68/77 pings ok]
+2026-11-26T17:41:33.913 -> PING gateway seq 80
+2026-11-26T17:41:34.153   ack from 0x0001 seq 36: try 1, 239 ms after first send  (RSSI -65 SNR 13)
+2026-11-26T17:41:34.354 <- 0x0001 data seq 141, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:41:34.355    PONG from 0x0001 seq 80: round trip 442 ms  [69/78 pings ok]
+2026-11-26T17:41:38.918 -> PING gateway seq 81
+2026-11-26T17:41:39.157   ack from 0x0001 seq 37: try 1, 238 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:41:39.359 <- 0x0001 data seq 142, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:41:39.359    PONG from 0x0001 seq 81: round trip 441 ms  [70/79 pings ok]
+2026-11-26T17:41:43.919 -> PING gateway seq 82
+2026-11-26T17:41:44.158   ack from 0x0001 seq 38: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:41:44.360 <- 0x0001 data seq 143, 7 B (RSSI -64 SNR 11)
+2026-11-26T17:41:44.360    PONG from 0x0001 seq 82: round trip 441 ms  [71/80 pings ok]
+2026-11-26T17:41:48.923 -> PING gateway seq 83
+2026-11-26T17:41:49.163   ack from 0x0001 seq 39: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:41:49.364 <- 0x0001 data seq 144, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:41:49.364    PONG from 0x0001 seq 83: round trip 441 ms  [72/81 pings ok]
+2026-11-26T17:41:53.932 -> PING gateway seq 84
+2026-11-26T17:41:54.173   ack from 0x0001 seq 40: try 1, 240 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:41:54.372 <- 0x0001 data seq 145, 7 B (RSSI -65 SNR 13)
+2026-11-26T17:41:54.372    PONG from 0x0001 seq 84: round trip 440 ms  [73/82 pings ok]
+2026-11-26T17:41:58.933 -> PING gateway seq 85
+2026-11-26T17:41:59.173   ack from 0x0001 seq 41: try 1, 239 ms after first send  (RSSI -68 SNR 12)
+2026-11-26T17:41:59.374 <- 0x0001 data seq 146, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:41:59.374    PONG from 0x0001 seq 85: round trip 441 ms  [74/83 pings ok]
+2026-11-26T17:42:03.938 -> PING gateway seq 86
+2026-11-26T17:42:04.178   ack from 0x0001 seq 42: try 1, 239 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:42:04.379 <- 0x0001 data seq 147, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:42:04.380    PONG from 0x0001 seq 86: round trip 441 ms  [75/84 pings ok]
+2026-11-26T17:42:08.945 -> PING gateway seq 87
+2026-11-26T17:42:09.186   ack from 0x0001 seq 43: try 1, 240 ms after first send  (RSSI -63 SNR 11)
+2026-11-26T17:42:09.386 <- 0x0001 data seq 148, 7 B (RSSI -63 SNR 12)
+2026-11-26T17:42:09.386    PONG from 0x0001 seq 87: round trip 441 ms  [76/85 pings ok]
+2026-11-26T17:42:13.953 -> PING gateway seq 88
+2026-11-26T17:42:14.194   ack from 0x0001 seq 44: try 1, 240 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:42:14.394 <- 0x0001 data seq 149, 7 B (RSSI -67 SNR 12)
+2026-11-26T17:42:14.395    PONG from 0x0001 seq 88: round trip 441 ms  [77/86 pings ok]
+2026-11-26T17:42:18.956 -> PING gateway seq 89
+2026-11-26T17:42:19.195   ack from 0x0001 seq 45: try 1, 239 ms after first send  (RSSI -64 SNR 13)
+2026-11-26T17:42:19.398 <- 0x0001 data seq 150, 7 B (RSSI -64 SNR 12)
+2026-11-26T17:42:19.398    PONG from 0x0001 seq 89: round trip 442 ms  [78/87 pings ok]
+2026-11-26T17:42:23.959 -> PING gateway seq 90
+2026-11-26T17:42:24.199   ack from 0x0001 seq 46: try 1, 239 ms after first send  (RSSI -71 SNR 12)
+2026-11-26T17:42:24.401 <- 0x0001 data seq 151, 7 B (RSSI -72 SNR 12)
+2026-11-26T17:42:24.401    PONG from 0x0001 seq 90: round trip 442 ms  [79/88 pings ok]
+2026-11-26T17:42:28.969 -> PING gateway seq 91
+2026-11-26T17:42:29.208   ack from 0x0001 seq 47: try 1, 239 ms after first send  (RSSI -60 SNR 12)
+2026-11-26T17:42:29.410 <- 0x0001 data seq 152, 7 B (RSSI -55 SNR 13)
+2026-11-26T17:42:29.411    PONG from 0x0001 seq 91: round trip 442 ms  [80/89 pings ok]
+2026-11-26T17:42:33.969 -> PING gateway seq 92
+2026-11-26T17:42:34.208   ack from 0x0001 seq 48: try 1, 239 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:42:34.421 <- 0x0001 data seq 153, 7 B (RSSI -50 SNR 12)
+2026-11-26T17:42:34.425    PONG from 0x0001 seq 92: round trip 452 ms  [81/90 pings ok]
+2026-11-26T17:42:38.974 -> PING gateway seq 93
+2026-11-26T17:42:39.213   ack from 0x0001 seq 49: try 1, 238 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:42:39.414 <- 0x0001 data seq 154, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:42:39.415    PONG from 0x0001 seq 93: round trip 440 ms  [82/91 pings ok]
+2026-11-26T17:42:43.982 -> PING gateway seq 94
+2026-11-26T17:42:44.221   ack from 0x0001 seq 50: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:42:44.422 <- 0x0001 data seq 155, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:42:44.423    PONG from 0x0001 seq 94: round trip 441 ms  [83/92 pings ok]
+2026-11-26T17:42:48.989 -> PING gateway seq 95
+2026-11-26T17:42:49.228   ack from 0x0001 seq 51: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:42:49.429 <- 0x0001 data seq 156, 7 B (RSSI -52 SNR 11)
+2026-11-26T17:42:49.429    PONG from 0x0001 seq 95: round trip 440 ms  [84/93 pings ok]
+2026-11-26T17:42:54.029 -> PING gateway seq 96
+2026-11-26T17:42:54.268   ack from 0x0001 seq 52: try 1, 239 ms after first send  (RSSI -52 SNR 13)
+2026-11-26T17:42:54.470 <- 0x0001 data seq 157, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:42:54.470    PONG from 0x0001 seq 96: round trip 442 ms  [85/94 pings ok]
+2026-11-26T17:42:59.038 -> PING gateway seq 97
+2026-11-26T17:42:59.277   ack from 0x0001 seq 53: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:42:59.479 <- 0x0001 data seq 158, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:42:59.479    PONG from 0x0001 seq 97: round trip 441 ms  [86/95 pings ok]
+2026-11-26T17:43:04.043 -> PING gateway seq 98
+2026-11-26T17:43:04.282   ack from 0x0001 seq 54: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:43:04.483 <- 0x0001 data seq 159, 7 B (RSSI -52 SNR 12)
+2026-11-26T17:43:04.483    PONG from 0x0001 seq 98: round trip 440 ms  [87/96 pings ok]
+2026-11-26T17:43:09.045 -> PING gateway seq 99
+2026-11-26T17:43:09.284   ack from 0x0001 seq 55: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:43:09.484 <- 0x0001 data seq 160, 7 B (RSSI -51 SNR 9)
+2026-11-26T17:43:09.484    PONG from 0x0001 seq 99: round trip 439 ms  [88/97 pings ok]
+2026-11-26T17:43:14.049 -> PING gateway seq 100
+2026-11-26T17:43:14.288   ack from 0x0001 seq 56: try 1, 239 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:43:14.488 <- 0x0001 data seq 161, 7 B (RSSI -52 SNR 13)
+2026-11-26T17:43:14.489    PONG from 0x0001 seq 100: round trip 440 ms  [89/98 pings ok]
+2026-11-26T17:43:19.053 -> PING gateway seq 101
+2026-11-26T17:43:19.291   ack from 0x0001 seq 57: try 1, 238 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:43:19.493 <- 0x0001 data seq 162, 7 B (RSSI -65 SNR 12)
+2026-11-26T17:43:19.493    PONG from 0x0001 seq 101: round trip 441 ms  [90/99 pings ok]
+2026-11-26T17:43:24.058 -> PING gateway seq 102
+2026-11-26T17:43:24.298   ack from 0x0001 seq 58: try 1, 240 ms after first send  (RSSI -79 SNR 13)
+2026-11-26T17:43:24.498 <- 0x0001 data seq 163, 7 B (RSSI -80 SNR 12)
+2026-11-26T17:43:24.498    PONG from 0x0001 seq 102: round trip 440 ms  [91/100 pings ok]
+2026-11-26T17:43:29.062 -> PING gateway seq 103
+2026-11-26T17:43:29.301   ack from 0x0001 seq 59: try 1, 239 ms after first send  (RSSI -67 SNR 12)
+2026-11-26T17:43:29.502 <- 0x0001 data seq 164, 7 B (RSSI -72 SNR 12)
+2026-11-26T17:43:29.503    PONG from 0x0001 seq 103: round trip 441 ms  [92/101 pings ok]
+2026-11-26T17:43:34.071 -> PING gateway seq 104
+2026-11-26T17:43:34.311   ack from 0x0001 seq 60: try 1, 240 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:43:34.511 <- 0x0001 data seq 165, 7 B (RSSI -59 SNR 12)
+2026-11-26T17:43:34.511    PONG from 0x0001 seq 104: round trip 441 ms  [93/102 pings ok]
+2026-11-26T17:43:39.072 -> PING gateway seq 105
+2026-11-26T17:43:39.311   ack from 0x0001 seq 61: try 1, 239 ms after first send  (RSSI -71 SNR 12)
+2026-11-26T17:43:39.512 <- 0x0001 data seq 166, 7 B (RSSI -71 SNR 12)
+2026-11-26T17:43:39.512    PONG from 0x0001 seq 105: round trip 440 ms  [94/103 pings ok]
+2026-11-26T17:43:44.076 -> PING gateway seq 106
+2026-11-26T17:43:44.315   ack from 0x0001 seq 62: try 1, 238 ms after first send  (RSSI -59 SNR 12)
+2026-11-26T17:43:44.516 <- 0x0001 data seq 167, 7 B (RSSI -56 SNR 12)
+2026-11-26T17:43:44.516    PONG from 0x0001 seq 106: round trip 440 ms  [95/104 pings ok]
+2026-11-26T17:43:49.085 -> PING gateway seq 107
+2026-11-26T17:43:49.324   ack from 0x0001 seq 63: try 1, 239 ms after first send  (RSSI -41 SNR 12)
+2026-11-26T17:43:49.525 <- 0x0001 data seq 168, 7 B (RSSI -40 SNR 11)
+2026-11-26T17:43:49.525    PONG from 0x0001 seq 107: round trip 440 ms  [96/105 pings ok]
+2026-11-26T17:43:54.088 -> PING gateway seq 108
+2026-11-26T17:43:54.327   ack from 0x0001 seq 64: try 1, 239 ms after first send  (RSSI -34 SNR 13)
+2026-11-26T17:43:54.528 <- 0x0001 data seq 169, 7 B (RSSI -34 SNR 13)
+2026-11-26T17:43:54.528    PONG from 0x0001 seq 108: round trip 440 ms  [97/106 pings ok]
+2026-11-26T17:43:55.082 not a star frame (29 B), ignored
+2026-11-26T17:43:58.533 not a star frame (29 B), ignored
+2026-11-26T17:43:59.091 -> PING gateway seq 109
+2026-11-26T17:43:59.330   ack from 0x0001 seq 65: try 1, 239 ms after first send  (RSSI -34 SNR 11)
+2026-11-26T17:43:59.531 <- 0x0001 data seq 170, 7 B (RSSI -33 SNR 13)
+2026-11-26T17:43:59.531    PONG from 0x0001 seq 109: round trip 440 ms  [98/107 pings ok]
+2026-11-26T17:44:04.097 -> PING gateway seq 110
+2026-11-26T17:44:04.337   ack from 0x0001 seq 66: try 1, 240 ms after first send  (RSSI -34 SNR 11)
+2026-11-26T17:44:04.538 <- 0x0001 data seq 171, 7 B (RSSI -34 SNR 12)
+2026-11-26T17:44:04.538    PONG from 0x0001 seq 110: round trip 441 ms  [99/108 pings ok]
+2026-11-26T17:44:05.078 not a star frame (33 B), ignored
+2026-11-26T17:44:05.366 not a star frame (29 B), ignored
+2026-11-26T17:44:09.104 -> PING gateway seq 111
+2026-11-26T17:44:09.343   ack from 0x0001 seq 67: try 1, 239 ms after first send  (RSSI -34 SNR 12)
+2026-11-26T17:44:09.544 <- 0x0001 data seq 172, 7 B (RSSI -35 SNR 12)
+2026-11-26T17:44:09.544    PONG from 0x0001 seq 111: round trip 440 ms  [100/109 pings ok]
+2026-11-26T17:44:14.112 -> PING gateway seq 112
+2026-11-26T17:44:14.351   ack from 0x0001 seq 68: try 1, 239 ms after first send  (RSSI -34 SNR 11)
+2026-11-26T17:44:14.553 <- 0x0001 data seq 173, 7 B (RSSI -34 SNR 12)
+2026-11-26T17:44:14.553    PONG from 0x0001 seq 112: round trip 441 ms  [101/110 pings ok]
+2026-11-26T17:44:15.368 not a star frame (29 B), ignored
+2026-11-26T17:44:15.408 not a star frame (33 B), ignored
+2026-11-26T17:44:19.119 -> PING gateway seq 113
+2026-11-26T17:44:19.358   ack from 0x0001 seq 69: try 1, 239 ms after first send  (RSSI -41 SNR 12)
+2026-11-26T17:44:19.560 <- 0x0001 data seq 174, 7 B (RSSI -38 SNR 11)
+2026-11-26T17:44:19.560    PONG from 0x0001 seq 113: round trip 441 ms  [102/111 pings ok]
+2026-11-26T17:44:24.123 -> PING gateway seq 114
+2026-11-26T17:44:24.366   ack from 0x0001 seq 70: try 1, 240 ms after first send  (RSSI -43 SNR 12)
+2026-11-26T17:44:24.564 <- 0x0001 data seq 175, 7 B (RSSI -49 SNR 12)
+2026-11-26T17:44:24.564    PONG from 0x0001 seq 114: round trip 441 ms  [103/112 pings ok]
+2026-11-26T17:44:29.126 -> PING gateway seq 115
+2026-11-26T17:44:29.366   ack from 0x0001 seq 71: try 1, 240 ms after first send  (RSSI -41 SNR 12)
+2026-11-26T17:44:29.567 <- 0x0001 data seq 176, 7 B (RSSI -40 SNR 12)
+2026-11-26T17:44:29.567    PONG from 0x0001 seq 115: round trip 441 ms  [104/113 pings ok]
+2026-11-26T17:44:32.756 not a star frame (29 B), ignored
+2026-11-26T17:44:34.130 -> PING gateway seq 116
+2026-11-26T17:44:34.370   ack from 0x0001 seq 72: try 1, 240 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:44:34.571 <- 0x0001 data seq 177, 7 B (RSSI -67 SNR 11)
+2026-11-26T17:44:34.572    PONG from 0x0001 seq 116: round trip 442 ms  [105/114 pings ok]
+2026-11-26T17:44:39.133 -> PING gateway seq 117
+2026-11-26T17:44:39.372   ack from 0x0001 seq 73: try 1, 239 ms after first send  (RSSI -42 SNR 12)
+2026-11-26T17:44:39.574 <- 0x0001 data seq 178, 7 B (RSSI -41 SNR 11)
+2026-11-26T17:44:39.574    PONG from 0x0001 seq 117: round trip 442 ms  [106/115 pings ok]
+2026-11-26T17:44:44.137 -> PING gateway seq 118
+2026-11-26T17:44:44.377   ack from 0x0001 seq 74: try 1, 239 ms after first send  (RSSI -44 SNR 12)
+2026-11-26T17:44:44.578 <- 0x0001 data seq 179, 7 B (RSSI -42 SNR 12)
+2026-11-26T17:44:44.578    PONG from 0x0001 seq 118: round trip 441 ms  [107/116 pings ok]
+2026-11-26T17:44:46.333 not a star frame (33 B), ignored
+2026-11-26T17:44:46.423 not a star frame (29 B), ignored
+2026-11-26T17:44:46.471 not a star frame (33 B), ignored
+2026-11-26T17:44:49.144 -> PING gateway seq 119
+2026-11-26T17:44:49.384   ack from 0x0001 seq 75: try 1, 239 ms after first send  (RSSI -58 SNR 13)
+2026-11-26T17:44:49.585 <- 0x0001 data seq 180, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:44:49.585    PONG from 0x0001 seq 119: round trip 441 ms  [108/117 pings ok]
+2026-11-26T17:44:54.150 -> PING gateway seq 120
+2026-11-26T17:44:54.590 <- 0x0001 data seq 181, 7 B (RSSI -55 SNR 12)
+2026-11-26T17:44:54.590    PONG from 0x0001 seq 120: round trip 440 ms  [109/118 pings ok]
+2026-11-26T17:44:54.800   repeat 1 of seq 76
+2026-11-26T17:44:55.039   ack from 0x0001 seq 76: try 2, 888 ms after first send  (RSSI -52 SNR 12)
+2026-11-26T17:44:56.663 not a star frame (33 B), ignored
+2026-11-26T17:44:56.796 not a star frame (33 B), ignored
+2026-11-26T17:44:56.892 not a star frame (29 B), ignored
+2026-11-26T17:44:57.050 not a star frame (127 B), ignored
+2026-11-26T17:44:57.126 not a star frame (29 B), ignored
+2026-11-26T17:44:59.155 -> PING gateway seq 121
+2026-11-26T17:44:59.395   ack from 0x0001 seq 77: try 1, 240 ms after first send  (RSSI -59 SNR 13)
+2026-11-26T17:44:59.594 <- 0x0001 data seq 182, 7 B (RSSI -58 SNR 12)
+2026-11-26T17:44:59.595    PONG from 0x0001 seq 121: round trip 440 ms  [110/119 pings ok]
+2026-11-26T17:45:04.159 -> PING gateway seq 122
+2026-11-26T17:45:04.398   ack from 0x0001 seq 78: try 1, 239 ms after first send  (RSSI -55 SNR 12)
+2026-11-26T17:45:04.599 <- 0x0001 data seq 183, 7 B (RSSI -57 SNR 12)
+2026-11-26T17:45:04.600    PONG from 0x0001 seq 122: round trip 441 ms  [111/120 pings ok]
+2026-11-26T17:45:06.785 not a star frame (170 B), ignored
+2026-11-26T17:45:06.973 not a star frame (33 B), ignored
+2026-11-26T17:45:07.205 not a star frame (29 B), ignored
+2026-11-26T17:45:07.402 not a star frame (127 B), ignored
+2026-11-26T17:45:09.170 -> PING gateway seq 123
+2026-11-26T17:45:09.410   ack from 0x0001 seq 79: try 1, 239 ms after first send  (RSSI -60 SNR 12)
+2026-11-26T17:45:09.610 <- 0x0001 data seq 184, 7 B (RSSI -60 SNR 12)
+2026-11-26T17:45:09.610    PONG from 0x0001 seq 123: round trip 440 ms  [112/121 pings ok]
+2026-11-26T17:45:14.175 -> PING gateway seq 124
+2026-11-26T17:45:14.417   ack from 0x0001 seq 80: try 1, 240 ms after first send  (RSSI -63 SNR 12)
+2026-11-26T17:45:14.615 <- 0x0001 data seq 185, 7 B (RSSI -61 SNR 13)
+2026-11-26T17:45:14.616    PONG from 0x0001 seq 124: round trip 441 ms  [113/122 pings ok]
+2026-11-26T17:45:17.300 not a star frame (33 B), ignored
+2026-11-26T17:45:17.555 not a star frame (29 B), ignored
+2026-11-26T17:45:17.689 not a star frame (127 B), ignored
+2026-11-26T17:45:19.181 -> PING gateway seq 125
+2026-11-26T17:45:19.421   ack from 0x0001 seq 81: try 1, 239 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:45:19.621 <- 0x0001 data seq 186, 7 B (RSSI -67 SNR 12)
+2026-11-26T17:45:19.621    PONG from 0x0001 seq 125: round trip 440 ms  [114/123 pings ok]
+2026-11-26T17:45:24.185 -> PING gateway seq 126
+2026-11-26T17:45:24.423   ack from 0x0001 seq 82: try 1, 238 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:45:24.624 <- 0x0001 data seq 187, 7 B (RSSI -65 SNR 13)
+2026-11-26T17:45:24.624    PONG from 0x0001 seq 126: round trip 440 ms  [115/124 pings ok]
+2026-11-26T17:45:27.636 not a star frame (33 B), ignored
+2026-11-26T17:45:27.896 not a star frame (29 B), ignored
+2026-11-26T17:45:29.193 -> PING gateway seq 127
+2026-11-26T17:45:29.432   ack from 0x0001 seq 83: try 1, 239 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:45:29.632 <- 0x0001 data seq 188, 7 B (RSSI -81 SNR 12)
+2026-11-26T17:45:29.633    PONG from 0x0001 seq 127: round trip 440 ms  [116/125 pings ok]
+2026-11-26T17:45:34.199 -> PING gateway seq 128
+2026-11-26T17:45:34.439   ack from 0x0001 seq 84: try 1, 239 ms after first send  (RSSI -68 SNR 11)
+2026-11-26T17:45:34.640 <- 0x0001 data seq 189, 7 B (RSSI -68 SNR 13)
+2026-11-26T17:45:34.640    PONG from 0x0001 seq 128: round trip 441 ms  [117/126 pings ok]
+2026-11-26T17:45:38.025 not a star frame (33 B), ignored
+2026-11-26T17:45:38.288 not a star frame (29 B), ignored
+2026-11-26T17:45:38.424 not a star frame (127 B), ignored
+2026-11-26T17:45:39.202 -> PING gateway seq 129
+2026-11-26T17:45:39.798   repeat 1 of seq 85
+2026-11-26T17:45:40.383   repeat 2 of seq 85
+2026-11-26T17:45:40.966   repeat 3 of seq 85
+2026-11-26T17:45:41.205   ack from 0x0001 seq 85: try 4, 2002 ms after first send  (RSSI -69 SNR 11)
+2026-11-26T17:45:41.407 <- 0x0001 data seq 190, 7 B (RSSI -73 SNR 12)
+2026-11-26T17:45:41.407    PONG from 0x0001 seq 129: round trip 2205 ms  [118/127 pings ok]
+2026-11-26T17:45:44.204 -> PING gateway seq 130
+2026-11-26T17:45:44.443   ack from 0x0001 seq 86: try 1, 239 ms after first send  (RSSI -76 SNR 12)
+2026-11-26T17:45:44.643 <- 0x0001 data seq 191, 7 B (RSSI -74 SNR 12)
+2026-11-26T17:45:44.644    PONG from 0x0001 seq 130: round trip 440 ms  [119/128 pings ok]
+2026-11-26T17:45:48.400 not a star frame (33 B), ignored
+2026-11-26T17:45:48.663 not a star frame (29 B), ignored
+2026-11-26T17:45:48.769 not a star frame (127 B), ignored
+2026-11-26T17:45:49.208 -> PING gateway seq 131
+2026-11-26T17:45:49.447   ack from 0x0001 seq 87: try 1, 239 ms after first send  (RSSI -65 SNR 13)
+2026-11-26T17:45:49.648 <- 0x0001 data seq 192, 7 B (RSSI -65 SNR 13)
+2026-11-26T17:45:49.648    PONG from 0x0001 seq 131: round trip 441 ms  [120/129 pings ok]
+2026-11-26T17:45:54.210 -> PING gateway seq 132
+2026-11-26T17:45:54.451   ack from 0x0001 seq 88: try 1, 240 ms after first send  (RSSI -75 SNR 12)
+2026-11-26T17:45:54.651 <- 0x0001 data seq 193, 7 B (RSSI -76 SNR 12)
+2026-11-26T17:45:54.651    PONG from 0x0001 seq 132: round trip 441 ms  [121/130 pings ok]
+2026-11-26T17:45:58.731 not a star frame (33 B), ignored
+2026-11-26T17:45:58.975 not a star frame (29 B), ignored
+2026-11-26T17:45:59.104 not a star frame (127 B), ignored
+2026-11-26T17:45:59.214 -> PING gateway seq 133
+2026-11-26T17:45:59.454   ack from 0x0001 seq 89: try 1, 239 ms after first send  (RSSI -71 SNR 13)
+2026-11-26T17:45:59.654 <- 0x0001 data seq 194, 7 B (RSSI -70 SNR 12)
+2026-11-26T17:45:59.655    PONG from 0x0001 seq 133: round trip 440 ms  [122/131 pings ok]
+2026-11-26T17:46:04.217 -> PING gateway seq 134
+2026-11-26T17:46:04.457   ack from 0x0001 seq 90: try 1, 240 ms after first send  (RSSI -66 SNR 12)
+2026-11-26T17:46:04.657 <- 0x0001 data seq 195, 7 B (RSSI -76 SNR 11)
+2026-11-26T17:46:04.658    PONG from 0x0001 seq 134: round trip 441 ms  [123/132 pings ok]
+2026-11-26T17:46:09.052 not a star frame (33 B), ignored
+2026-11-26T17:46:09.224 -> PING gateway seq 135
+2026-11-26T17:46:09.463   ack from 0x0001 seq 91: try 1, 239 ms after first send  (RSSI -64 SNR 12)
+2026-11-26T17:46:09.665 <- 0x0001 data seq 196, 7 B (RSSI -65 SNR 13)
+2026-11-26T17:46:09.665    PONG from 0x0001 seq 135: round trip 441 ms  [124/133 pings ok]
+2026-11-26T17:46:14.225 -> PING gateway seq 136
+2026-11-26T17:46:14.464   ack from 0x0001 seq 92: try 1, 239 ms after first send  (RSSI -65 SNR 12)
+2026-11-26T17:46:14.664 <- 0x0001 data seq 197, 7 B (RSSI -67 SNR 11)
+2026-11-26T17:46:14.664    PONG from 0x0001 seq 136: round trip 440 ms  [125/134 pings ok]
+2026-11-26T17:46:19.231 -> PING gateway seq 137
+2026-11-26T17:46:19.470   ack from 0x0001 seq 93: try 1, 239 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:46:19.672 <- 0x0001 data seq 198, 7 B (RSSI -66 SNR 12)
+2026-11-26T17:46:19.672    PONG from 0x0001 seq 137: round trip 441 ms  [126/135 pings ok]
+2026-11-26T17:46:24.236 -> PING gateway seq 138
+2026-11-26T17:46:24.860   repeat 1 of seq 94
+2026-11-26T17:46:25.100   ack from 0x0001 seq 94: try 2, 864 ms after first send  (RSSI -80 SNR 12)
+2026-11-26T17:46:25.300 <- 0x0001 data seq 199, 7 B (RSSI -78 SNR 12)
+2026-11-26T17:46:25.300    PONG from 0x0001 seq 138: round trip 1064 ms  [127/136 pings ok]
+2026-11-26T17:46:29.241 -> PING gateway seq 139
+2026-11-26T17:46:29.481   ack from 0x0001 seq 95: try 1, 240 ms after first send  (RSSI -74 SNR 12)
+2026-11-26T17:46:29.681 <- 0x0001 data seq 200, 7 B (RSSI -73 SNR 11)
+2026-11-26T17:46:29.682    PONG from 0x0001 seq 139: round trip 441 ms  [128/137 pings ok]
+2026-11-26T17:46:34.244 -> PING gateway seq 140
+2026-11-26T17:46:34.485   ack from 0x0001 seq 96: try 1, 240 ms after first send  (RSSI -70 SNR 12)
+2026-11-26T17:46:34.685 <- 0x0001 data seq 201, 7 B (RSSI -69 SNR 12)
+2026-11-26T17:46:34.686    PONG from 0x0001 seq 140: round trip 442 ms  [129/138 pings ok]
+2026-11-26T17:46:39.247 -> PING gateway seq 141
+2026-11-26T17:46:39.486   ack from 0x0001 seq 97: try 1, 239 ms after first send  (RSSI -84 SNR 10)
+2026-11-26T17:46:39.687 <- 0x0001 data seq 202, 7 B (RSSI -82 SNR 10)
+2026-11-26T17:46:39.687    PONG from 0x0001 seq 141: round trip 440 ms  [130/139 pings ok]
+2026-11-26T17:46:44.254 -> PING gateway seq 142
+2026-11-26T17:46:44.905   repeat 1 of seq 98
+2026-11-26T17:46:45.519   repeat 2 of seq 98
+2026-11-26T17:46:46.095   repeat 3 of seq 98
+2026-11-26T17:46:46.671   no ack from 0x0001 seq 98 after 4 tries
+2026-11-26T17:46:49.255 -> PING gateway seq 143
+2026-11-26T17:46:49.934   repeat 1 of seq 99
+2026-11-26T17:46:50.583   repeat 2 of seq 99
+2026-11-26T17:46:51.161   repeat 3 of seq 99
+2026-11-26T17:46:51.737   no ack from 0x0001 seq 99 after 4 tries
+2026-11-26T17:46:52.258    PING seq 142: no PONG  [130/141 pings ok]
+2026-11-26T17:46:54.256 -> PING gateway seq 144
+2026-11-26T17:46:54.495   ack from 0x0001 seq 100: try 1, 239 ms after first send  (RSSI -71 SNR 12)
+2026-11-26T17:46:54.696 <- 0x0001 data seq 203, 7 B (RSSI -75 SNR 12)
+2026-11-26T17:46:54.696    PONG from 0x0001 seq 144: round trip 441 ms  [131/142 pings ok]
+2026-11-26T17:46:57.265    PING seq 143: no PONG  [131/142 pings ok]
+2026-11-26T17:46:59.265 -> PING gateway seq 145
+2026-11-26T17:46:59.504   ack from 0x0001 seq 101: try 1, 239 ms after first send  (RSSI -78 SNR 12)
+2026-11-26T17:46:59.710 <- 0x0001 data seq 204, 7 B (RSSI -74 SNR 12)
+2026-11-26T17:46:59.711    PONG from 0x0001 seq 145: round trip 445 ms  [132/143 pings ok]
+2026-11-26T17:47:04.265 -> PING gateway seq 146
+2026-11-26T17:47:04.505   ack from 0x0001 seq 102: try 1, 239 ms after first send  (RSSI -73 SNR 11)
+2026-11-26T17:47:04.707 <- 0x0001 data seq 205, 7 B (RSSI -73 SNR 12)
+2026-11-26T17:47:04.707    PONG from 0x0001 seq 146: round trip 442 ms  [133/144 pings ok]
+2026-11-26T17:47:09.273 -> PING gateway seq 147
+2026-11-26T17:47:09.512   ack from 0x0001 seq 103: try 1, 239 ms after first send  (RSSI -79 SNR 12)
+2026-11-26T17:47:09.713 <- 0x0001 data seq 206, 7 B (RSSI -77 SNR 13)
+2026-11-26T17:47:09.714    PONG from 0x0001 seq 147: round trip 441 ms  [134/145 pings ok]
+2026-11-26T17:47:14.279 -> PING gateway seq 148
+2026-11-26T17:47:14.869   repeat 1 of seq 104
+2026-11-26T17:47:15.447   repeat 2 of seq 104
+2026-11-26T17:47:16.105   repeat 3 of seq 104
+2026-11-26T17:47:16.680   no ack from 0x0001 seq 104 after 4 tries
+2026-11-26T17:47:19.282 -> PING gateway seq 149
+2026-11-26T17:47:19.880   repeat 1 of seq 105
+2026-11-26T17:47:20.500   repeat 2 of seq 105
+2026-11-26T17:47:21.077   repeat 3 of seq 105
+2026-11-26T17:47:21.652   no ack from 0x0001 seq 105 after 4 tries
+2026-11-26T17:47:22.286    PING seq 148: no PONG  [134/147 pings ok]
+2026-11-26T17:47:24.287 -> PING gateway seq 150
+2026-11-26T17:47:24.947   repeat 1 of seq 106
+2026-11-26T17:47:25.592   repeat 2 of seq 106
+2026-11-26T17:47:26.184   repeat 3 of seq 106
+2026-11-26T17:47:26.424   ack from 0x0001 seq 106: try 4, 2136 ms after first send  (RSSI -72 SNR 12)
+2026-11-26T17:47:26.632 <- 0x0001 data seq 207, 7 B (RSSI -82 SNR 12)
+2026-11-26T17:47:26.633    PONG from 0x0001 seq 150: round trip 2346 ms  [135/148 pings ok]
+2026-11-26T17:47:27.286    PING seq 149: no PONG  [135/148 pings ok]
+2026-11-26T17:47:29.292 -> PING gateway seq 151
+2026-11-26T17:47:29.531   ack from 0x0001 seq 107: try 1, 239 ms after first send  (RSSI -66 SNR 13)
+2026-11-26T17:47:29.733 <- 0x0001 data seq 208, 7 B (RSSI -70 SNR 12)
+2026-11-26T17:47:29.734    PONG from 0x0001 seq 151: round trip 442 ms  [136/149 pings ok]
+2026-11-26T17:47:34.293 -> PING gateway seq 152
+2026-11-26T17:47:34.532   ack from 0x0001 seq 108: try 1, 238 ms after first send  (RSSI -66 SNR 11)
+2026-11-26T17:47:34.733 <- 0x0001 data seq 209, 7 B (RSSI -61 SNR 12)
+2026-11-26T17:47:34.733    PONG from 0x0001 seq 152: round trip 441 ms  [137/150 pings ok]
+2026-11-26T17:47:39.300 -> PING gateway seq 153
+2026-11-26T17:47:39.540   ack from 0x0001 seq 109: try 1, 239 ms after first send  (RSSI -54 SNR 12)
+2026-11-26T17:47:39.740 <- 0x0001 data seq 210, 7 B (RSSI -54 SNR 12)
+2026-11-26T17:47:39.741    PONG from 0x0001 seq 153: round trip 440 ms  [138/151 pings ok]
+2026-11-26T17:47:44.307 -> PING gateway seq 154
+2026-11-26T17:47:44.546   ack from 0x0001 seq 110: try 1, 239 ms after first send  (RSSI -53 SNR 12)
+2026-11-26T17:47:44.746 <- 0x0001 data seq 211, 7 B (RSSI -52 SNR 11)
+2026-11-26T17:47:44.747    PONG from 0x0001 seq 154: round trip 440 ms  [139/152 pings ok]
+2026-11-26T17:47:49.311 -> PING gateway seq 155
+2026-11-26T17:47:49.551   ack from 0x0001 seq 111: try 1, 240 ms after first send  (RSSI -62 SNR 13)
+2026-11-26T17:47:49.751 <- 0x0001 data seq 212, 7 B (RSSI -51 SNR 13)
+2026-11-26T17:47:49.751    PONG from 0x0001 seq 155: round trip 441 ms  [140/153 pings ok]
+2026-11-26T17:47:52.664 not a star frame (33 B), ignored
+2026-11-26T17:47:54.316 -> PING gateway seq 156
+2026-11-26T17:47:54.556   ack from 0x0001 seq 112: try 1, 240 ms after first send  (RSSI -34 SNR 12)
+2026-11-26T17:47:54.756 <- 0x0001 data seq 213, 7 B (RSSI -29 SNR 12)
+2026-11-26T17:47:54.757    PONG from 0x0001 seq 156: round trip 441 ms  [141/154 pings ok]
+2026-11-26T17:47:59.318 -> PING gateway seq 157
+2026-11-26T17:47:59.558   ack from 0x0001 seq 113: try 1, 240 ms after first send  (RSSI -38 SNR 11)
+2026-11-26T17:47:59.758 <- 0x0001 data seq 214, 7 B (RSSI -37 SNR 11)
+2026-11-26T17:47:59.759    PONG from 0x0001 seq 157: round trip 441 ms  [142/155 pings ok]
+2026-11-26T17:48:04.322 -> PING gateway seq 158
+2026-11-26T17:48:04.562   ack from 0x0001 seq 114: try 1, 240 ms after first send  (RSSI -40 SNR 12)
+2026-11-26T17:48:04.762 <- 0x0001 data seq 215, 7 B (RSSI -33 SNR 11)
+2026-11-26T17:48:04.762    PONG from 0x0001 seq 158: round trip 441 ms  [143/156 pings ok]
+2026-11-26T17:48:09.328 -> PING gateway seq 159
+2026-11-26T17:48:09.567   ack from 0x0001 seq 115: try 1, 239 ms after first send  (RSSI -49 SNR 12)
+2026-11-26T17:48:09.768 <- 0x0001 data seq 216, 7 B (RSSI -47 SNR 13)
+2026-11-26T17:48:09.768    PONG from 0x0001 seq 159: round trip 441 ms  [144/157 pings ok]
+2026-11-26T17:48:14.332 -> PING gateway seq 160
+2026-11-26T17:48:14.571   ack from 0x0001 seq 116: try 1, 239 ms after first send  (RSSI -48 SNR 12)
+2026-11-26T17:48:14.771 <- 0x0001 data seq 217, 7 B (RSSI -47 SNR 13)
+2026-11-26T17:48:14.771    PONG from 0x0001 seq 160: round trip 439 ms  [145/158 pings ok]
+2026-11-26T17:48:19.339 -> PING gateway seq 161
+2026-11-26T17:48:19.578   ack from 0x0001 seq 117: try 1, 239 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:48:19.778 <- 0x0001 data seq 218, 7 B (RSSI -53 SNR 12)
+2026-11-26T17:48:19.779    PONG from 0x0001 seq 161: round trip 440 ms  [146/159 pings ok]
+2026-11-26T17:48:24.349 -> PING gateway seq 162
+2026-11-26T17:48:24.589   ack from 0x0001 seq 118: try 1, 239 ms after first send  (RSSI -49 SNR 12)
+2026-11-26T17:48:24.789 <- 0x0001 data seq 219, 7 B (RSSI -47 SNR 13)
+2026-11-26T17:48:24.789    PONG from 0x0001 seq 162: round trip 440 ms  [147/160 pings ok]
+2026-11-26T17:48:29.355 -> PING gateway seq 163
+2026-11-26T17:48:29.595   ack from 0x0001 seq 119: try 1, 240 ms after first send  (RSSI -53 SNR 11)
+2026-11-26T17:48:29.795 <- 0x0001 data seq 220, 7 B (RSSI -51 SNR 12)
+2026-11-26T17:48:29.795    PONG from 0x0001 seq 163: round trip 440 ms  [148/161 pings ok]
+2026-11-26T17:48:34.356 -> PING gateway seq 164
+2026-11-26T17:48:34.595   ack from 0x0001 seq 120: try 1, 239 ms after first send  (RSSI -51 SNR 12)
+2026-11-26T17:48:34.796 <- 0x0001 data seq 221, 7 B (RSSI -52 SNR 12)
+2026-11-26T17:48:34.796    PONG from 0x0001 seq 164: round trip 440 ms  [149/162 pings ok]
+2026-11-26T17:48:39.358 -> PING gateway seq 165
+2026-11-26T17:48:39.596   ack from 0x0001 seq 121: try 1, 238 ms after first send  (RSSI -48 SNR 12)
+2026-11-26T17:48:39.797 <- 0x0001 data seq 222, 7 B (RSSI -49 SNR 12)
+2026-11-26T17:48:39.798    PONG from 0x0001 seq 165: round trip 440 ms  [150/163 pings ok]
+2026-11-26T17:48:44.358 -> PING gateway seq 166
+2026-11-26T17:48:44.597   ack from 0x0001 seq 122: try 1, 238 ms after first send  (RSSI -43 SNR 12)
+2026-11-26T17:48:44.798 <- 0x0001 data seq 223, 7 B (RSSI -43 SNR 12)
+2026-11-26T17:48:44.799    PONG from 0x0001 seq 166: round trip 440 ms  [151/164 pings ok]
+2026-11-26T17:48:49.366 -> PING gateway seq 167
+2026-11-26T17:48:49.605   ack from 0x0001 seq 123: try 1, 238 ms after first send  (RSSI -48 SNR 13)
+2026-11-26T17:48:49.806 <- 0x0001 data seq 224, 7 B (RSSI -46 SNR 12)
+2026-11-26T17:48:49.806    PONG from 0x0001 seq 167: round trip 440 ms  [152/165 pings ok]
+2026-11-26T17:48:54.373 -> PING gateway seq 168
+2026-11-26T17:48:54.612   ack from 0x0001 seq 124: try 1, 239 ms after first send  (RSSI -48 SNR 12)
+2026-11-26T17:48:54.812 <- 0x0001 data seq 225, 7 B (RSSI -47 SNR 13)
+2026-11-26T17:48:54.812    PONG from 0x0001 seq 168: round trip 439 ms  [153/166 pings ok]
+2026-11-26T17:48:59.377 -> PING gateway seq 169
+2026-11-26T17:48:59.616   ack from 0x0001 seq 125: try 1, 239 ms after first send  (RSSI -28 SNR 12)
+2026-11-26T17:48:59.817 <- 0x0001 data seq 226, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:48:59.817    PONG from 0x0001 seq 169: round trip 440 ms  [154/167 pings ok]
+2026-11-26T17:49:04.378 -> PING gateway seq 170
+2026-11-26T17:49:04.616   ack from 0x0001 seq 126: try 1, 238 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:49:04.817 <- 0x0001 data seq 227, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:04.818    PONG from 0x0001 seq 170: round trip 440 ms  [155/168 pings ok]
+2026-11-26T17:49:09.383 -> PING gateway seq 171
+2026-11-26T17:49:09.622   ack from 0x0001 seq 127: try 1, 238 ms after first send  (RSSI -37 SNR 12)
+2026-11-26T17:49:09.822 <- 0x0001 data seq 228, 7 B (RSSI -28 SNR 12)
+2026-11-26T17:49:09.822    PONG from 0x0001 seq 171: round trip 439 ms  [156/169 pings ok]
+2026-11-26T17:49:14.386 -> PING gateway seq 172
+2026-11-26T17:49:14.626   ack from 0x0001 seq 128: try 1, 240 ms after first send  (RSSI -28 SNR 13)
+2026-11-26T17:49:14.826 <- 0x0001 data seq 229, 7 B (RSSI -28 SNR 13)
+2026-11-26T17:49:14.827    PONG from 0x0001 seq 172: round trip 441 ms  [157/170 pings ok]
+2026-11-26T17:49:19.392 -> PING gateway seq 173
+2026-11-26T17:49:19.632   ack from 0x0001 seq 129: try 1, 239 ms after first send  (RSSI -27 SNR 13)
+2026-11-26T17:49:19.833 <- 0x0001 data seq 230, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:19.833    PONG from 0x0001 seq 173: round trip 441 ms  [158/171 pings ok]
+2026-11-26T17:49:24.394 -> PING gateway seq 174
+2026-11-26T17:49:24.633   ack from 0x0001 seq 130: try 1, 239 ms after first send  (RSSI -32 SNR 13)
+2026-11-26T17:49:24.833 <- 0x0001 data seq 231, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:24.833    PONG from 0x0001 seq 174: round trip 439 ms  [159/172 pings ok]
+2026-11-26T17:49:29.396 -> PING gateway seq 175
+2026-11-26T17:49:29.635   ack from 0x0001 seq 131: try 1, 239 ms after first send  (RSSI -38 SNR 12)
+2026-11-26T17:49:29.836 <- 0x0001 data seq 232, 7 B (RSSI -37 SNR 12)
+2026-11-26T17:49:29.836    PONG from 0x0001 seq 175: round trip 440 ms  [160/173 pings ok]
+2026-11-26T17:49:34.397 -> PING gateway seq 176
+2026-11-26T17:49:34.637   ack from 0x0001 seq 132: try 1, 239 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:49:34.837 <- 0x0001 data seq 233, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:34.838    PONG from 0x0001 seq 176: round trip 440 ms  [161/174 pings ok]
+2026-11-26T17:49:39.399 -> PING gateway seq 177
+2026-11-26T17:49:39.639   ack from 0x0001 seq 133: try 1, 239 ms after first send  (RSSI -28 SNR 12)
+2026-11-26T17:49:39.840 <- 0x0001 data seq 234, 7 B (RSSI -28 SNR 13)
+2026-11-26T17:49:39.840    PONG from 0x0001 seq 177: round trip 441 ms  [162/175 pings ok]
+2026-11-26T17:49:44.401 -> PING gateway seq 178
+2026-11-26T17:49:44.640   ack from 0x0001 seq 134: try 1, 239 ms after first send  (RSSI -28 SNR 12)
+2026-11-26T17:49:44.841 <- 0x0001 data seq 235, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:44.841    PONG from 0x0001 seq 178: round trip 440 ms  [163/176 pings ok]
+2026-11-26T17:49:49.405 -> PING gateway seq 179
+2026-11-26T17:49:49.644   ack from 0x0001 seq 135: try 1, 239 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:49:49.843 <- 0x0001 data seq 236, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:49:49.843    PONG from 0x0001 seq 179: round trip 439 ms  [164/177 pings ok]
+2026-11-26T17:49:54.409 -> PING gateway seq 180
+2026-11-26T17:49:54.648   ack from 0x0001 seq 136: try 1, 238 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:49:54.849 <- 0x0001 data seq 237, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:49:54.849    PONG from 0x0001 seq 180: round trip 440 ms  [165/178 pings ok]
+2026-11-26T17:49:59.413 -> PING gateway seq 181
+2026-11-26T17:49:59.651   ack from 0x0001 seq 137: try 1, 238 ms after first send  (RSSI -28 SNR 12)
+2026-11-26T17:49:59.853 <- 0x0001 data seq 238, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:49:59.853    PONG from 0x0001 seq 181: round trip 440 ms  [166/179 pings ok]
+2026-11-26T17:50:04.416 -> PING gateway seq 182
+2026-11-26T17:50:04.654   ack from 0x0001 seq 138: try 1, 238 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:50:04.856 <- 0x0001 data seq 239, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:50:04.856    PONG from 0x0001 seq 182: round trip 440 ms  [167/180 pings ok]
+2026-11-26T17:50:09.420 -> PING gateway seq 183
+2026-11-26T17:50:09.659   ack from 0x0001 seq 139: try 1, 239 ms after first send  (RSSI -26 SNR 12)
+2026-11-26T17:50:09.861 <- 0x0001 data seq 240, 7 B (RSSI -26 SNR 12)
+2026-11-26T17:50:09.861    PONG from 0x0001 seq 183: round trip 441 ms  [168/181 pings ok]
+2026-11-26T17:50:14.423 -> PING gateway seq 184
+2026-11-26T17:50:14.662   ack from 0x0001 seq 140: try 1, 239 ms after first send  (RSSI -27 SNR 12)
+2026-11-26T17:50:14.862 <- 0x0001 data seq 241, 7 B (RSSI -27 SNR 12)
+2026-11-26T17:50:14.862    PONG from 0x0001 seq 184: round trip 439 ms  [169/182 pings ok]
+2026-11-26T17:50:19.423 -> PING gateway seq 185
+2026-11-26T17:50:19.663   ack from 0x0001 seq 141: try 1, 239 ms after first send  (RSSI -42 SNR 12)
+2026-11-26T17:50:19.864 <- 0x0001 data seq 242, 7 B (RSSI -42 SNR 12)
+2026-11-26T17:50:19.864    PONG from 0x0001 seq 185: round trip 440 ms  [170/183 pings ok]
+2026-11-26T17:50:24.428 -> PING gateway seq 186
+2026-11-26T17:50:24.666   ack from 0x0001 seq 142: try 1, 238 ms after first send  (RSSI -43 SNR 12)
+2026-11-26T17:50:24.867 <- 0x0001 data seq 243, 7 B (RSSI -44 SNR 12)
+2026-11-26T17:50:24.867    PONG from 0x0001 seq 186: round trip 439 ms  [171/184 pings ok]
+2026-11-26T17:50:29.429 -> PING gateway seq 187
+2026-11-26T17:50:29.667   ack from 0x0001 seq 143: try 1, 238 ms after first send  (RSSI -43 SNR 10)
+2026-11-26T17:50:29.869 <- 0x0001 data seq 244, 7 B (RSSI -43 SNR 12)
+2026-11-26T17:50:29.869    PONG from 0x0001 seq 187: round trip 440 ms  [172/185 pings ok]

@@ -26,6 +26,23 @@ Masthead unit: Seeed XIAO ESP32-C6, Ebyte E52-900NW22S, and an auto-direction TT
 * The console runs over USB (USB-Serial-JTAG), so UART0 is free for RS-485.
 * To use the XIAO's U.FL connector for Wi-Fi, go to Settings → Wi-Fi antenna → External, then reboot.
 
+## Wio-E5 instead of the E52 (star network)
+
+A node can use a Seeed Wio-E5 mini in place of the E52, to join a Wio-E5 star gateway. Details: [../docs/DESIGN.md](../docs/DESIGN.md) §13.
+
+| XIAO | Wio-E5 mini |
+|---|---|
+| 5V | pin 1 (5V) |
+| GND | pin 24 (GND) |
+| D4 | pin 19, labelled **RX** (not RX1 or RX2; it sits across from a GND pin) |
+| D5 | pin 18, labelled **TX** |
+
+1. **Before any wiring,** set the mini to 115200 on a PC (`AT+UART=BR, 115200`, then `AT+RESET`).
+2. **Remove R3** on the mini: the small resistor that beeps to the RX pin. Its twin R4, which beeps to TX, stays. Without this the mini's USB chip fights D4. Mark the mini NODE.
+3. Power from the XIAO's USB only. **Never plug in the mini's USB-C while it is wired.**
+4. Build with `idf.py -B build-wio -D SDKCONFIG=sdkconfig.wio -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.wio.defaults" -p COMx build flash`.
+5. Set channel, PAN ID and gateway address to the star gateway's on the node's own page; radio settings cannot be changed over the air. The access point is named after the last four hex digits of the MAC, while the radio address is derived from them (0x0100 added), so the two differ: node 7A44's access point is `LMESH-NODE-7944`.
+
 ## Build / flash
 
 ```

@@ -5,7 +5,7 @@ LoRa mesh SCADA network: field RTUs on RS-485 → masthead nodes → Ebyte E52 L
 This document collects how the system is built and what bench bring-up taught us (November 2026). Code lives in this repo:
 - `main/`: gateway firmware
 - `node/`: field node firmware
-- `shared/`: E52 driver and the LMESH layer, used by both
+- `shared/`: E52 driver and the LMESH layer, used by both; `wio.c` is the alternative Wio-E5 star radio (§13)
 - `tools/`: bench tools
 
 Drawings:
@@ -317,6 +317,7 @@ Open:
 - **DHCP leases:** persisting them would need a patched IDF dhcpserver; not done.
 - **Node with DE-pin transceivers:** use UART RS-485 half-duplex mode with RTS on D1.
 - **Node board** on the -1U modules and the daughter-board radio section.
+- **Wio-E5 star (§13):** longer retry window for node uplinks (dead spots outlast the 4 tries); find the extra ~120 ms on C6 node pings; a radio tag in the firmware version; relabel the radio cards for Wio builds; own STM32WL firmware to remove the AT firmware's ~100 ms per transmission.
 
 ## 11. Firmware updates
 
@@ -389,3 +390,46 @@ E52 and optional OLED as on any node.
 **Other ways to connect a GPS, not built:** a software receiver on a spare pin (D0, D1, D7, D8) would let a node keep its RTU and have GPS; the C6's low-power UART is a third option but sits on the XIAO's underside pads.
 
 **Not done yet:** GPS time on ordinary poll data (`t` is still uptime), storing survey points across a gateway restart, map tiles.
+
+## 13. Wio-E5 star network (alternative radio, first hardware run 26 Nov 2026)
+
+A Seeed Wio-E5 (STM32WLE5JC) used as a plain LoRa radio, in a star like an XBee-SX network: every node talks to the gateway directly, with no routing. `shared/wio.c` implements the same interface as the E52 driver (`e52.h`), so LMESH, MQTT, Modbus, firmware updates and the survey run unchanged. It is chosen at build time with `CONFIG_LMESH_RADIO_WIO`; the E52 build is untouched.
+
+**Builds** (separate configuration and build folder, so the E52 build stays as it is):
+
+```
+cd lmesh-gw          (gateway, ESP32-S31)
+idf.py --preview -B build-wio -D SDKCONFIG=sdkconfig.wio -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.wio.defaults" -p COMx build flash
+cd lmesh-gw/node     (node, ESP32-C6)
+idf.py -B build-wio -D SDKCONFIG=sdkconfig.wio -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.wio.defaults" -p COMx build flash
+```
+
+**Module.** The factory AT firmware (4.0.11 here) in test mode: `AT+TEST=RFCFG` sets frequency, spreading factor, bandwidth and power; `TXLRPKT` sends a packet as hex; `RXLRPKT` receives, and each packet is reported with RSSI and SNR. The firmware adds nothing else: no addressing, acknowledgement or retries. Only the UART speed is kept in the module (`AT+UART=BR, 115200` once, then `AT+RESET`); address and network ID live in our settings.
+
+**Air frame** (the LoRa payload):
+
+| Bytes | Field |
+|---|---|
+| b0 | 0xB0 plus kind: 1 data (ack wanted), 2 broadcast, 3 ack |
+| b1–b2 | network ID (`e52_panid`), little endian; other networks are ignored |
+| b3–b4 | destination (0xFFFF = everyone) |
+| b5–b6 | source |
+| b7 | sequence: an ack echoes it, a repeat keeps it, duplicates are dropped |
+| b8– | payload, up to 200 bytes: one LMESH frame |
+
+**Delivery.** The receiver acks every unicast frame at once. The sender listens for the ack for 100 ms + twice the ack's airtime + 250 ms (370 ms at SF7) and repeats up to 3 times after a random pause, so 4 tries over about 2.5 s at SF7. One frame is in flight at a time. Frames that are not ours (an E52 mesh on the same frequency, for instance) are counted as junk and dropped.
+
+**Radio settings.** Channel numbers are the E52's (850.125 + n MHz). Always 500 kHz, CR 4/5, preamble 12, CRC on. `e52_rate` 0–5 = SF5, SF7, SF9, SF10, SF11, SF12 (0–2 match the E52's three rates in speed). Power −1 to 22 dBm: test mode refuses anything lower and keeps its old settings, so `wio.c` clamps. As we read FCC 15.247 / RSS-247, a signal this wide may use up to 1 W on one channel without hopping.
+
+**Link to the module.**
+- Gateway: a Wio-E5 mini (CP2102N) or the Dev Board (CH340) on the S31's USB-HS port through an OTG cable; the S31 powers it. The connection is reopened if the board is unplugged.
+- Node: UART1 on D4 (GPIO22, to the module's RX) and D5 (GPIO23, from its TX), 115200. On a Wio-E5 mini, the USB chip also drives the module's RX through R3 (20 Ω); remove R3 on a mini used as a node, and set its speed before, because afterwards the laptop cannot send it commands. Power the pair from the XIAO's USB only.
+
+**Measured** (bench, SF7, 26 Nov): frame plus ack about 240 ms; ping round trip 440 ms to a PC test node, 447–580 ms to a C6 node; the AT firmware's own ~100 ms per transmission dominates. Range at −1 dBm both ends, gateway indoors: out to about 40 m outside with short dead spots; details in [WORKLOG-2026-11-26.md](WORKLOG-2026-11-26.md).
+
+**Bring-up lessons.**
+- **One task owns the module.** Whoever talks to it holds `s_port`. The radio task (priority 12) sleeps one tick with the port free after every pass; without that, lower-priority callers (start-up, the web AT console) never got it. It blocks only until its next deadline, never spins.
+- **`uart_read_bytes()` waits for the full count asked for**, unlike the USB stream buffer, which returns as soon as a byte arrives. The node reads whatever has arrived and waits only for the first byte. Before that fix, every reply was seen only when the caller's timeout ran out.
+- **Gateways close together hear each other off-channel.** 8 MHz apart and a metre away, an E52 at 22 dBm came through at −88 dBm (−22 dBm on its own channel).
+
+**Limits.** No routing (a repeater is a later step); one frame in flight; the retry window is shorter than the dead spots seen outdoors; the AT firmware's per-transmission overhead, which firmware of our own on the STM32WL would remove.

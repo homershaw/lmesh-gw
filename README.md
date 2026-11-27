@@ -30,6 +30,18 @@ idf.py build flash monitor
 
 The component manager downloads `espressif/mqtt` and `espressif/cjson` on IDF 6.x (they were moved out of IDF). On IDF 5.x it uses the built-in versions.
 
+## Wio-E5 star build (alternative radio)
+
+The same gateway can drive a Seeed Wio-E5 in a star network instead of the E52 mesh. Details: [docs/DESIGN.md](docs/DESIGN.md) §13.
+
+```bash
+idf.py --preview -B build-wio -D SDKCONFIG=sdkconfig.wio -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.wio.defaults" -p COMx build flash
+```
+
+* **Radio:** a Wio-E5 mini (or the Dev Board) on the S31's **USB-HS** port with an OTG cable; the S31 powers it. Set the module to 115200 once (`AT+UART=BR, 115200`, then `AT+RESET`) on a PC first.
+* **Settings:** same fields as the E52. Rate 0–5 = SF5, SF7, SF9, SF10, SF11, SF12 at 500 kHz; power −1 to 22 dBm; "Save + apply to E52" sends them to the Wio-E5. Give the star its own channel and PAN ID, different from any E52 mesh nearby.
+* **Test node on a PC:** `python tools/wionode.py COMx` (another mini on USB); `--ping 5 --log file --beep` for a range walk, then `python tools/rangelog.py file`.
+
 ## Wiring E52-900NW22S
 
 | E52 pin | Signal | ESP32-S31 |
